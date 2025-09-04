@@ -1,0 +1,949 @@
+#!/usr/bin/env python3
+"""
+Indian Market Visualization
+
+This module provides comprehensive visualization capabilities specifically designed
+for Indian market data including Nifty 50, Bank Nifty, and Sensex with
+market-specific charts, indicators, and analysis displays.
+"""
+
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+import matplotlib.pyplot as plt
+import seaborn as sns
+from typing import Dict, List, Optional, Tuple, Any
+from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger(__name__)
+
+class IndianMarketVisualizer:
+    """Comprehensive visualization class for Indian market analysis"""
+    
+    def __init__(self):
+        # Indian market color scheme
+        self.color_scheme = {
+            'nifty_50': '#FF6B35',
+            'bank_nifty': '#004E89',
+            'sensex': '#00A8CC',
+            'bullish': '#00C851',
+            'bearish': '#FF4444',
+            'neutral': '#FF8800',
+            'background': '#F8F9FA',
+            'grid': '#E9ECEF',
+            'text': '#2C3E50',
+            'success': '#28A745',
+            'warning': '#FFC107',
+            'danger': '#DC3545',
+            'info': '#17A2B8'
+        }
+        
+        # Indian market specific settings
+        self.market_symbols = {
+            'NIFTY_50': {'name': 'Nifty 50', 'color': self.color_scheme['nifty_50']},
+            'BANK_NIFTY': {'name': 'Bank Nifty', 'color': self.color_scheme['bank_nifty']},
+            'SENSEX': {'name': 'Sensex', 'color': self.color_scheme['sensex']},
+            'NIFTY_IT': {'name': 'Nifty IT', 'color': '#6F42C1'},
+            'NIFTY_AUTO': {'name': 'Nifty Auto', 'color': '#E83E8C'},
+            'NIFTY_PHARMA': {'name': 'Nifty Pharma', 'color': '#20C997'}
+        }
+    
+    def create_indian_market_dashboard(self, market_data: Dict[str, pd.DataFrame], 
+                                     analysis_data: Dict[str, Any]) -> go.Figure:
+        """Create comprehensive Indian market dashboard"""
+        try:
+            # Create subplots for dashboard
+            fig = make_subplots(
+                rows=3, cols=2,
+                subplot_titles=(
+                    'Nifty 50 Price Chart', 'Bank Nifty Price Chart',
+                    'Market Overview', 'Sector Performance',
+                    'Options Analysis', 'Portfolio Performance'
+                ),
+                specs=[
+                    [{"secondary_y": True}, {"secondary_y": True}],
+                    [{"type": "indicator"}, {"type": "bar"}],
+                    [{"type": "scatter"}, {"type": "scatter"}]
+                ],
+                vertical_spacing=0.08,
+                horizontal_spacing=0.1
+            )
+            
+            # Add Nifty 50 chart
+            if 'NIFTY_50' in market_data:
+                self._add_price_chart(fig, market_data['NIFTY_50'], 1, 1, 'NIFTY_50')
+            
+            # Add Bank Nifty chart
+            if 'BANK_NIFTY' in market_data:
+                self._add_price_chart(fig, market_data['BANK_NIFTY'], 1, 2, 'BANK_NIFTY')
+            
+            # Add market overview indicators
+            self._add_market_overview(fig, analysis_data.get('market_overview', {}), 2, 1)
+            
+            # Add sector performance
+            self._add_sector_performance(fig, analysis_data.get('sector_performance', {}), 2, 2)
+            
+            # Add options analysis
+            self._add_options_analysis(fig, analysis_data.get('options_analysis', {}), 3, 1)
+            
+            # Add portfolio performance
+            self._add_portfolio_performance(fig, analysis_data.get('portfolio_metrics', {}), 3, 2)
+            
+            # Update layout
+            fig.update_layout(
+                title={
+                    'text': 'Indian Market Analysis Dashboard',
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'font': {'size': 24, 'color': self.color_scheme['text']}
+                },
+                height=1200,
+                showlegend=True,
+                plot_bgcolor=self.color_scheme['background'],
+                paper_bgcolor='white',
+                font=dict(family="Arial", size=12, color=self.color_scheme['text'])
+            )
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating Indian market dashboard: {e}")
+            return go.Figure()
+    
+    def _add_price_chart(self, fig: go.Figure, data: pd.DataFrame, row: int, col: int, symbol: str) -> None:
+        """Add price chart for Indian market index"""
+        try:
+            symbol_info = self.market_symbols.get(symbol, {'name': symbol, 'color': '#000000'})
+            
+            # Candlestick chart
+            fig.add_trace(
+                go.Candlestick(
+                    x=data.index,
+                    open=data['Open'],
+                    high=data['High'],
+                    low=data['Low'],
+                    close=data['Close'],
+                    name=f"{symbol_info['name']} Price",
+                    increasing_line_color=self.color_scheme['bullish'],
+                    decreasing_line_color=self.color_scheme['bearish']
+                ),
+                row=row, col=col
+            )
+            
+            # Add moving averages
+            if len(data) >= 20:
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=data['Close'].rolling(20).mean(),
+                        name='SMA 20',
+                        line=dict(color='orange', width=2)
+                    ),
+                    row=row, col=col
+                )
+            
+            if len(data) >= 50:
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=data['Close'].rolling(50).mean(),
+                        name='SMA 50',
+                        line=dict(color='blue', width=2)
+                    ),
+                    row=row, col=col
+                )
+            
+            # Add volume
+            fig.add_trace(
+                go.Bar(
+                    x=data.index,
+                    y=data['Volume'],
+                    name='Volume',
+                    marker_color='lightblue',
+                    opacity=0.6
+                ),
+                row=row, col=col, secondary_y=True
+            )
+            
+            # Update axes
+            fig.update_xaxes(title_text="Date", row=row, col=col)
+            fig.update_yaxes(title_text="Price", row=row, col=col)
+            fig.update_yaxes(title_text="Volume", secondary_y=True, row=row, col=col)
+            
+        except Exception as e:
+            logger.error(f"Error adding price chart for {symbol}: {e}")
+    
+    def _add_market_overview(self, fig: go.Figure, overview_data: Dict[str, Any], row: int, col: int) -> None:
+        """Add market overview indicators"""
+        try:
+            # Create gauge charts for key metrics
+            metrics = [
+                ('Nifty 50', overview_data.get('NIFTY_50', {}).get('change_percent', 0)),
+                ('Bank Nifty', overview_data.get('BANK_NIFTY', {}).get('change_percent', 0)),
+                ('Sensex', overview_data.get('SENSEX', {}).get('change_percent', 0))
+            ]
+            
+            for i, (name, value) in enumerate(metrics):
+                fig.add_trace(
+                    go.Indicator(
+                        mode="gauge+number+delta",
+                        value=value,
+                        domain={'x': [0, 0.33], 'y': [0.5 + i*0.15, 0.65 + i*0.15]},
+                        title={'text': name},
+                        gauge={
+                            'axis': {'range': [-5, 5]},
+                            'bar': {'color': self.color_scheme['bullish'] if value >= 0 else self.color_scheme['bearish']},
+                            'steps': [
+                                {'range': [-5, -2], 'color': self.color_scheme['bearish']},
+                                {'range': [-2, 2], 'color': self.color_scheme['neutral']},
+                                {'range': [2, 5], 'color': self.color_scheme['bullish']}
+                            ],
+                            'threshold': {
+                                'line': {'color': "red", 'width': 4},
+                                'thickness': 0.75,
+                                'value': 0
+                            }
+                        }
+                    ),
+                    row=row, col=col
+                )
+            
+        except Exception as e:
+            logger.error(f"Error adding market overview: {e}")
+    
+    def _add_sector_performance(self, fig: go.Figure, sector_data: Dict[str, Any], row: int, col: int) -> None:
+        """Add sector performance bar chart"""
+        try:
+            sectors = list(sector_data.keys())
+            performance = [sector_data[sector].get('change_percent', 0) for sector in sectors]
+            
+            colors = [self.color_scheme['bullish'] if p >= 0 else self.color_scheme['bearish'] for p in performance]
+            
+            fig.add_trace(
+                go.Bar(
+                    x=sectors,
+                    y=performance,
+                    name='Sector Performance',
+                    marker_color=colors,
+                    text=[f"{p:.2f}%" for p in performance],
+                    textposition='auto'
+                ),
+                row=row, col=col
+            )
+            
+            fig.update_xaxes(title_text="Sectors", row=row, col=col)
+            fig.update_yaxes(title_text="Change %", row=row, col=col)
+            
+        except Exception as e:
+            logger.error(f"Error adding sector performance: {e}")
+    
+    def _add_options_analysis(self, fig: go.Figure, options_data: Dict[str, Any], row: int, col: int) -> None:
+        """Add options analysis visualization"""
+        try:
+            # IV Skew chart
+            if 'iv_skew' in options_data:
+                skew_data = options_data['iv_skew']
+                strikes = list(skew_data.keys())
+                ivs = list(skew_data.values())
+                
+                fig.add_trace(
+                    go.Scatter(
+                        x=strikes,
+                        y=ivs,
+                        mode='lines+markers',
+                        name='IV Skew',
+                        line=dict(color=self.color_scheme['info'], width=3),
+                        marker=dict(size=8)
+                    ),
+                    row=row, col=col
+                )
+            
+            # Put-Call Ratio
+            if 'put_call_ratio' in options_data:
+                pcr = options_data['put_call_ratio']
+                fig.add_trace(
+                    go.Scatter(
+                        x=[0, 1, 2, 3],
+                        y=[pcr, pcr, pcr, pcr],
+                        mode='lines',
+                        name=f'PCR: {pcr:.2f}',
+                        line=dict(color=self.color_scheme['warning'], width=2, dash='dash')
+                    ),
+                    row=row, col=col
+                )
+            
+            fig.update_xaxes(title_text="Strike Price", row=row, col=col)
+            fig.update_yaxes(title_text="Implied Volatility", row=row, col=col)
+            
+        except Exception as e:
+            logger.error(f"Error adding options analysis: {e}")
+    
+    def _add_portfolio_performance(self, fig: go.Figure, portfolio_data: Dict[str, Any], row: int, col: int) -> None:
+        """Add portfolio performance visualization"""
+        try:
+            # Portfolio value over time
+            if 'portfolio_history' in portfolio_data:
+                history = portfolio_data['portfolio_history']
+                dates = [h['date'] for h in history]
+                values = [h['value'] for h in history]
+                
+                fig.add_trace(
+                    go.Scatter(
+                        x=dates,
+                        y=values,
+                        mode='lines',
+                        name='Portfolio Value',
+                        line=dict(color=self.color_scheme['success'], width=3)
+                    ),
+                    row=row, col=col
+                )
+            
+            # P&L distribution
+            if 'pnl_distribution' in portfolio_data:
+                pnl_data = portfolio_data['pnl_distribution']
+                fig.add_trace(
+                    go.Histogram(
+                        x=pnl_data,
+                        name='P&L Distribution',
+                        marker_color=self.color_scheme['info'],
+                        opacity=0.7
+                    ),
+                    row=row, col=col
+                )
+            
+            fig.update_xaxes(title_text="Date", row=row, col=col)
+            fig.update_yaxes(title_text="Portfolio Value", row=row, col=col)
+            
+        except Exception as e:
+            logger.error(f"Error adding portfolio performance: {e}")
+    
+    def create_market_overview_chart(self, overview_data: Dict[str, Any]) -> go.Figure:
+        """Create market overview chart showing key indices performance"""
+        try:
+            if not overview_data:
+                return None
+            
+            # Prepare data for the chart
+            indices = []
+            prices = []
+            changes = []
+            colors = []
+            
+            for symbol, data in overview_data.items():
+                symbol_info = self.market_symbols.get(symbol, {'name': symbol, 'color': '#1f77b4'})
+                indices.append(symbol_info['name'])
+                prices.append(data.get('current_price', 0))
+                changes.append(data.get('change_percent', 0))
+                
+                # Color based on performance
+                if data.get('change_percent', 0) > 0:
+                    colors.append('#00ff00')  # Green for positive
+                elif data.get('change_percent', 0) < 0:
+                    colors.append('#ff0000')  # Red for negative
+                else:
+                    colors.append('#808080')  # Gray for neutral
+            
+            # Create bar chart
+            fig = go.Figure(data=[
+                go.Bar(
+                    x=indices,
+                    y=prices,
+                    marker_color=colors,
+                    text=[f"₹{price:,.0f}<br>({change:+.2f}%)" for price, change in zip(prices, changes)],
+                    textposition='auto',
+                    hovertemplate='<b>%{x}</b><br>Price: ₹%{y:,.0f}<br>Change: %{customdata:+.2f}%<extra></extra>',
+                    customdata=changes
+                )
+            ])
+            
+            fig.update_layout(
+                title={
+                    'text': 'Indian Market Overview - Key Indices',
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'font': {'size': 16}
+                },
+                xaxis_title='Indices',
+                yaxis_title='Price (₹)',
+                showlegend=False,
+                height=400,
+                margin=dict(l=50, r=50, t=80, b=50)
+            )
+            
+            # Add horizontal line for reference
+            if prices:
+                avg_price = sum(prices) / len(prices)
+                fig.add_hline(
+                    y=avg_price,
+                    line_dash="dash",
+                    line_color="gray",
+                    annotation_text=f"Avg: ₹{avg_price:,.0f}",
+                    annotation_position="top right"
+                )
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating market overview chart: {e}")
+            return None
+    
+    def create_indian_options_strategy_chart(self, strategy_data: Dict[str, Any]) -> go.Figure:
+        """Create options strategy payoff diagram for Indian markets"""
+        try:
+            fig = go.Figure()
+            
+            strategy_name = strategy_data.get('name', 'Options Strategy')
+            legs = strategy_data.get('legs', [])
+            
+            # Calculate payoff at different underlying prices
+            underlying_prices = np.arange(
+                strategy_data.get('min_price', 20000),
+                strategy_data.get('max_price', 30000),
+                50
+            )
+            
+            payoffs = []
+            for price in underlying_prices:
+                payoff = self._calculate_strategy_payoff(price, legs)
+                payoffs.append(payoff)
+            
+            # Plot payoff diagram
+            fig.add_trace(
+                go.Scatter(
+                    x=underlying_prices,
+                    y=payoffs,
+                    mode='lines',
+                    name=strategy_name,
+                    line=dict(color=self.color_scheme['info'], width=3),
+                    fill='tonexty'
+                )
+            )
+            
+            # Add breakeven points
+            breakeven_points = strategy_data.get('breakeven_points', [])
+            for be_point in breakeven_points:
+                # Convert numpy float64 to regular float for display
+                be_value = float(be_point)
+                fig.add_vline(
+                    x=be_value,
+                    line_dash="dash",
+                    line_color="red",
+                    annotation_text=f"BE: ₹{be_value:,.2f}"
+                )
+            
+            # Add current price line
+            current_price = strategy_data.get('current_price', 25000)
+            fig.add_vline(
+                x=current_price,
+                line_dash="dot",
+                line_color="green",
+                annotation_text=f"Current: {current_price}"
+            )
+            
+            # Update layout
+            fig.update_layout(
+                title=f"{strategy_name} Payoff Diagram",
+                xaxis_title="Underlying Price",
+                yaxis_title="Profit/Loss",
+                plot_bgcolor=self.color_scheme['background'],
+                paper_bgcolor='white',
+                height=600
+            )
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating options strategy chart: {e}")
+            return go.Figure()
+    
+    def _calculate_strategy_payoff(self, underlying_price: float, legs: List[Dict[str, Any]]) -> float:
+        """Calculate strategy payoff at given underlying price"""
+        try:
+            total_payoff = 0
+            
+            for leg in legs:
+                action = leg.get('action', 'BUY')
+                option_type = leg.get('option_type', 'call')
+                strike = leg.get('strike', 0)
+                premium = leg.get('premium', 0)
+                quantity = leg.get('quantity', 1)
+                
+                # Calculate option payoff
+                if option_type == 'call':
+                    option_payoff = max(0, underlying_price - strike) - premium
+                else:  # put
+                    option_payoff = max(0, strike - underlying_price) - premium
+                
+                # Apply action (buy/sell)
+                if action == 'SELL':
+                    option_payoff = -option_payoff
+                
+                total_payoff += option_payoff * quantity
+            
+            return total_payoff
+            
+        except Exception as e:
+            logger.error(f"Error calculating strategy payoff: {e}")
+            return 0.0
+    
+    def create_indian_technical_analysis_chart(self, data: pd.DataFrame, indicators: Dict[str, Any], 
+                                             symbol: str) -> go.Figure:
+        """Create comprehensive technical analysis chart for Indian markets"""
+        try:
+            symbol_info = self.market_symbols.get(symbol, {'name': symbol, 'color': '#000000'})
+            
+            # Create subplots
+            fig = make_subplots(
+                rows=4, cols=1,
+                shared_xaxes=True,
+                vertical_spacing=0.05,
+                subplot_titles=(
+                    f'{symbol_info["name"]} Price & Indicators',
+                    'RSI',
+                    'MACD',
+                    'Volume'
+                ),
+                row_heights=[0.4, 0.2, 0.2, 0.2]
+            )
+            
+            # Main price chart
+            fig.add_trace(
+                go.Candlestick(
+                    x=data.index,
+                    open=data['Open'],
+                    high=data['High'],
+                    low=data['Low'],
+                    close=data['Close'],
+                    name='Price',
+                    increasing_line_color=self.color_scheme['bullish'],
+                    decreasing_line_color=self.color_scheme['bearish']
+                ),
+                row=1, col=1
+            )
+            
+            # Add moving averages
+            if 'ema_12' in indicators:
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['ema_12'],
+                        name='EMA 12',
+                        line=dict(color='orange', width=2)
+                    ),
+                    row=1, col=1
+                )
+            
+            if 'ema_26' in indicators:
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['ema_26'],
+                        name='EMA 26',
+                        line=dict(color='blue', width=2)
+                    ),
+                    row=1, col=1
+                )
+            
+            # Bollinger Bands
+            if all(key in indicators for key in ['bb_upper', 'bb_middle', 'bb_lower']):
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['bb_upper'],
+                        name='BB Upper',
+                        line=dict(color='gray', width=1, dash='dash')
+                    ),
+                    row=1, col=1
+                )
+                
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['bb_lower'],
+                        name='BB Lower',
+                        line=dict(color='gray', width=1, dash='dash'),
+                        fill='tonexty'
+                    ),
+                    row=1, col=1
+                )
+            
+            # RSI
+            if 'rsi' in indicators:
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['rsi'],
+                        name='RSI',
+                        line=dict(color=self.color_scheme['info'], width=2)
+                    ),
+                    row=2, col=1
+                )
+                
+                # Add RSI levels
+                fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
+                fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
+                fig.add_hline(y=50, line_dash="dot", line_color="gray", row=2, col=1)
+            
+            # MACD
+            if all(key in indicators for key in ['macd', 'macd_signal', 'macd_hist']):
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['macd'],
+                        name='MACD',
+                        line=dict(color='blue', width=2)
+                    ),
+                    row=3, col=1
+                )
+                
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['macd_signal'],
+                        name='Signal',
+                        line=dict(color='red', width=2)
+                    ),
+                    row=3, col=1
+                )
+                
+                # MACD Histogram
+                colors = ['green' if val >= 0 else 'red' for val in indicators['macd_hist']]
+                fig.add_trace(
+                    go.Bar(
+                        x=data.index,
+                        y=indicators['macd_hist'],
+                        name='Histogram',
+                        marker_color=colors,
+                        opacity=0.6
+                    ),
+                    row=3, col=1
+                )
+            
+            # Volume
+            fig.add_trace(
+                go.Bar(
+                    x=data.index,
+                    y=data['Volume'],
+                    name='Volume',
+                    marker_color='lightblue',
+                    opacity=0.6
+                ),
+                row=4, col=1
+            )
+            
+            # Update layout
+            fig.update_layout(
+                title=f'{symbol_info["name"]} Technical Analysis',
+                height=1000,
+                showlegend=True,
+                plot_bgcolor=self.color_scheme['background'],
+                paper_bgcolor='white'
+            )
+            
+            # Update axes
+            fig.update_xaxes(title_text="Date", row=4, col=1)
+            fig.update_yaxes(title_text="Price", row=1, col=1)
+            fig.update_yaxes(title_text="RSI", row=2, col=1)
+            fig.update_yaxes(title_text="MACD", row=3, col=1)
+            fig.update_yaxes(title_text="Volume", row=4, col=1)
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating technical analysis chart: {e}")
+            return go.Figure()
+    
+    def create_indian_market_heatmap(self, sector_data: Dict[str, Any]) -> go.Figure:
+        """Create sector performance heatmap for Indian markets"""
+        try:
+            # Prepare data for heatmap
+            sectors = list(sector_data.keys())
+            performance = [sector_data[sector].get('change_percent', 0) for sector in sectors]
+            
+            # Create color scale
+            colors = []
+            for p in performance:
+                if p > 2:
+                    colors.append(self.color_scheme['success'])
+                elif p > 0:
+                    colors.append(self.color_scheme['bullish'])
+                elif p > -2:
+                    colors.append(self.color_scheme['neutral'])
+                else:
+                    colors.append(self.color_scheme['bearish'])
+            
+            fig = go.Figure(data=go.Bar(
+                x=sectors,
+                y=performance,
+                marker_color=colors,
+                text=[f"{p:.2f}%" for p in performance],
+                textposition='auto'
+            ))
+            
+            fig.update_layout(
+                title='Indian Market Sector Performance',
+                xaxis_title='Sectors',
+                yaxis_title='Change %',
+                plot_bgcolor=self.color_scheme['background'],
+                paper_bgcolor='white',
+                height=500
+            )
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating market heatmap: {e}")
+            return go.Figure()
+    
+    def create_indian_portfolio_performance_chart(self, portfolio_data: Dict[str, Any]) -> go.Figure:
+        """Create portfolio performance chart for Indian markets"""
+        try:
+            fig = make_subplots(
+                rows=2, cols=2,
+                subplot_titles=(
+                    'Portfolio Value Over Time',
+                    'P&L Distribution',
+                    'Strategy Performance',
+                    'Risk Metrics'
+                ),
+                specs=[
+                    [{"type": "scatter"}, {"type": "histogram"}],
+                    [{"type": "bar"}, {"type": "indicator"}]
+                ]
+            )
+            
+            # Portfolio value over time
+            if 'portfolio_history' in portfolio_data:
+                history = portfolio_data['portfolio_history']
+                dates = [h['date'] for h in history]
+                values = [h['value'] for h in history]
+                
+                fig.add_trace(
+                    go.Scatter(
+                        x=dates,
+                        y=values,
+                        mode='lines',
+                        name='Portfolio Value',
+                        line=dict(color=self.color_scheme['success'], width=3)
+                    ),
+                    row=1, col=1
+                )
+            
+            # P&L distribution
+            if 'pnl_distribution' in portfolio_data:
+                pnl_data = portfolio_data['pnl_distribution']
+                fig.add_trace(
+                    go.Histogram(
+                        x=pnl_data,
+                        name='P&L Distribution',
+                        marker_color=self.color_scheme['info'],
+                        opacity=0.7
+                    ),
+                    row=1, col=2
+                )
+            
+            # Strategy performance
+            if 'strategy_performance' in portfolio_data:
+                strategies = list(portfolio_data['strategy_performance'].keys())
+                pnl_values = list(portfolio_data['strategy_performance'].values())
+                
+                colors = [self.color_scheme['bullish'] if p >= 0 else self.color_scheme['bearish'] for p in pnl_values]
+                
+                fig.add_trace(
+                    go.Bar(
+                        x=strategies,
+                        y=pnl_values,
+                        name='Strategy P&L',
+                        marker_color=colors
+                    ),
+                    row=2, col=1
+                )
+            
+            # Risk metrics
+            if 'risk_metrics' in portfolio_data:
+                risk_data = portfolio_data['risk_metrics']
+                sharpe_ratio = risk_data.get('sharpe_ratio', 0)
+                
+                fig.add_trace(
+                    go.Indicator(
+                        mode="gauge+number",
+                        value=sharpe_ratio,
+                        title={'text': 'Sharpe Ratio'},
+                        gauge={
+                            'axis': {'range': [-2, 2]},
+                            'bar': {'color': self.color_scheme['success'] if sharpe_ratio > 1 else self.color_scheme['warning']},
+                            'steps': [
+                                {'range': [-2, 0], 'color': self.color_scheme['bearish']},
+                                {'range': [0, 1], 'color': self.color_scheme['neutral']},
+                                {'range': [1, 2], 'color': self.color_scheme['bullish']}
+                            ]
+                        }
+                    ),
+                    row=2, col=2
+                )
+            
+            fig.update_layout(
+                title='Indian Market Portfolio Performance',
+                height=800,
+                showlegend=True,
+                plot_bgcolor=self.color_scheme['background'],
+                paper_bgcolor='white'
+            )
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating portfolio performance chart: {e}")
+            return go.Figure()
+    
+    def create_live_prediction_chart(self, prediction_data: Dict[str, Any]) -> go.Figure:
+        """Create live prediction chart with price forecasts"""
+        try:
+            current_price = prediction_data.get('current_price', 0)
+            pred_5m = prediction_data.get('predicted_price_5m', current_price)
+            pred_10m = prediction_data.get('predicted_price_10m', current_price)
+            confidence_5m = prediction_data.get('confidence_5m', 0.5)
+            confidence_10m = prediction_data.get('confidence_10m', 0.5)
+            timestamp = prediction_data.get('timestamp', datetime.now())
+            
+            # Create time points
+            times = [timestamp, timestamp + timedelta(minutes=5), timestamp + timedelta(minutes=10)]
+            prices = [current_price, pred_5m, pred_10m]
+            
+            # Create main prediction line
+            fig = go.Figure()
+            
+            fig.add_trace(go.Scatter(
+                x=times,
+                y=prices,
+                mode='lines+markers',
+                name='Price Prediction',
+                line=dict(color='blue', width=3),
+                marker=dict(size=8)
+            ))
+            
+            # Add confidence bands
+            if confidence_5m > 0:
+                uncertainty_5m = current_price * 0.01 * (1 - confidence_5m)  # 1% uncertainty
+                fig.add_trace(go.Scatter(
+                    x=[times[0], times[1]],
+                    y=[current_price + uncertainty_5m, pred_5m + uncertainty_5m],
+                    mode='lines',
+                    line=dict(width=0),
+                    showlegend=False,
+                    hoverinfo='skip'
+                ))
+                
+                fig.add_trace(go.Scatter(
+                    x=[times[0], times[1]],
+                    y=[current_price - uncertainty_5m, pred_5m - uncertainty_5m],
+                    mode='lines',
+                    line=dict(width=0),
+                    fill='tonexty',
+                    fillcolor='rgba(0,100,80,0.2)',
+                    name=f'5m Confidence ({confidence_5m:.1%})',
+                    hoverinfo='skip'
+                ))
+            
+            if confidence_10m > 0:
+                uncertainty_10m = current_price * 0.015 * (1 - confidence_10m)  # 1.5% uncertainty
+                fig.add_trace(go.Scatter(
+                    x=[times[1], times[2]],
+                    y=[pred_5m + uncertainty_10m, pred_10m + uncertainty_10m],
+                    mode='lines',
+                    line=dict(width=0),
+                    showlegend=False,
+                    hoverinfo='skip'
+                ))
+                
+                fig.add_trace(go.Scatter(
+                    x=[times[1], times[2]],
+                    y=[pred_5m - uncertainty_10m, pred_10m - uncertainty_10m],
+                    mode='lines',
+                    line=dict(width=0),
+                    fill='tonexty',
+                    fillcolor='rgba(255,0,0,0.2)',
+                    name=f'10m Confidence ({confidence_10m:.1%})',
+                    hoverinfo='skip'
+                ))
+            
+            # Add current price line
+            fig.add_hline(
+                y=current_price,
+                line_dash="dash",
+                line_color="gray",
+                annotation_text=f"Current: ₹{current_price:,.2f}"
+            )
+            
+            fig.update_layout(
+                title="Live Nifty 50 Price Prediction",
+                xaxis_title="Time",
+                yaxis_title="Price (₹)",
+                height=500,
+                showlegend=True,
+                hovermode='x unified'
+            )
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating live prediction chart: {e}")
+            return self._create_error_chart("Error creating prediction chart")
+    
+    def create_entry_signal_chart(self, signal_data: Dict[str, Any]) -> go.Figure:
+        """Create entry signal visualization"""
+        try:
+            signal = signal_data.get('signal', 'HOLD')
+            confidence = signal_data.get('confidence', 0.5)
+            target_price = signal_data.get('target_price', 0)
+            stop_loss = signal_data.get('stop_loss', 0)
+            current_price = signal_data.get('current_price', 0)
+            risk_reward = signal_data.get('risk_reward_ratio', 0)
+            
+            # Create gauge chart for signal strength
+            fig = go.Figure(go.Indicator(
+                mode = "gauge+number+delta",
+                value = confidence * 100,
+                domain = {'x': [0, 1], 'y': [0, 1]},
+                title = {'text': f"Entry Signal: {signal}"},
+                delta = {'reference': 50},
+                gauge = {
+                    'axis': {'range': [None, 100]},
+                    'bar': {'color': "darkblue"},
+                    'steps': [
+                        {'range': [0, 30], 'color': "lightgray"},
+                        {'range': [30, 70], 'color': "yellow"},
+                        {'range': [70, 100], 'color': "green"}
+                    ],
+                    'threshold': {
+                        'line': {'color': "red", 'width': 4},
+                        'thickness': 0.75,
+                        'value': 70
+                    }
+                }
+            ))
+            
+            fig.update_layout(
+                title="Market Entry Signal Strength",
+                height=400
+            )
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating entry signal chart: {e}")
+            return self._create_error_chart("Error creating signal chart")
+
+# Example usage and testing
+if __name__ == "__main__":
+    # Configure logging
+    logging.basicConfig(level=logging.INFO)
+    
+    # Create visualizer
+    visualizer = IndianMarketVisualizer()
+    
+    print("Testing Indian Market Visualization...")
+    print("Indian Market Visualization module loaded successfully")
