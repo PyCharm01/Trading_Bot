@@ -1034,7 +1034,7 @@ class IndianTradingApp:
             with col1:
                 st.metric("Current Price", f"₹{current_price:,.0f}")
             with col2:
-                lot_size = get_lot_size(symbol)
+                lot_size = self.options_engine.get_lot_size(symbol)
                 st.metric("Lot Size", lot_size)
             
             # Strategy recommendation
