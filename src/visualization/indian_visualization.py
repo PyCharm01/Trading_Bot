@@ -493,7 +493,27 @@ class IndianMarketVisualizer:
                                              symbol: str) -> go.Figure:
         """Create comprehensive technical analysis chart for Indian markets"""
         try:
+            # Validate input data
+            if data is None or data.empty:
+                logger.error("Data is None or empty")
+                return self._create_error_chart("No data available for chart creation")
+            
+            if indicators is None:
+                logger.error("Indicators is None")
+                return self._create_error_chart("No indicators data available")
+            
+            # Check required columns
+            required_columns = ['Open', 'High', 'Low', 'Close']
+            missing_columns = [col for col in required_columns if col not in data.columns]
+            if missing_columns:
+                logger.error(f"Missing required columns: {missing_columns}")
+                return self._create_error_chart(f"Missing required columns: {missing_columns}")
+            
             symbol_info = self.market_symbols.get(symbol, {'name': symbol, 'color': '#000000'})
+            
+            # Debug logging
+            logger.info(f"Creating chart for {symbol} with {len(data)} data points")
+            logger.info(f"Available indicators: {list(indicators.keys()) if indicators else 'None'}")
             
             # Create subplots
             fig = make_subplots(

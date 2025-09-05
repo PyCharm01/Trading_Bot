@@ -814,6 +814,13 @@ class IndianTradingApp:
             )
             
             try:
+                # Debug information
+                st.write(f"**Debug Info:**")
+                st.write(f"- Data shape: {data.shape}")
+                st.write(f"- Data columns: {list(data.columns)}")
+                st.write(f"- Analysis keys: {list(analysis.keys()) if analysis else 'No analysis data'}")
+                st.write(f"- Chart type: {chart_type}")
+                
                 if chart_type == "Simple Test Chart":
                     # Show simple test chart
                     chart = self.visualizer.create_simple_test_chart(data, symbol)
@@ -830,8 +837,13 @@ class IndianTradingApp:
                 else:
                     # Show full technical analysis chart
                     chart = self.visualizer.create_indian_technical_analysis_chart(
-                        data, analysis, st.session_state.analysis_params
+                        data, analysis['indicators'], symbol
                     )
+                
+                st.write(f"- Chart created: {chart is not None}")
+                if chart:
+                    st.write(f"- Chart data length: {len(chart.data)}")
+                    st.write(f"- Chart data types: {[trace.type for trace in chart.data]}")
                 
                 if chart and len(chart.data) > 0:
                     st.plotly_chart(chart, use_container_width=True)
@@ -840,6 +852,8 @@ class IndianTradingApp:
                     st.info("Try selecting 'Simple Test Chart' to verify basic functionality")
             except Exception as e:
                 st.error(f"Error creating technical chart: {e}")
+                import traceback
+                st.code(traceback.format_exc())
                 st.info("This might be due to insufficient data or network issues. Try refreshing the page.")
             
             # Detailed analysis

@@ -3480,3 +3480,375 @@
 2025-09-05 11:34:07,927 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
 2025-09-05 11:34:07,933 - INFO - Generated 262 mock records for NIFTY_50
 2025-09-05 11:34:08,713 - INFO - Models trained successfully with 252 samples
+2025-09-05 11:48:35,037 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,070 - ERROR - $^NSEI: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:48:35,071 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:48:35,071 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:48:35,073 - INFO - Generated 5 mock records for NIFTY_50
+2025-09-05 11:48:35,112 - ERROR - Failed to get ticker '^NSEBANK' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,148 - ERROR - $^NSEBANK: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:48:35,149 - ERROR - Error fetching data for BANK_NIFTY: No data found for BANK_NIFTY
+2025-09-05 11:48:35,150 - INFO - Generating mock data for BANK_NIFTY for demonstration purposes
+2025-09-05 11:48:35,153 - INFO - Generated 5 mock records for BANK_NIFTY
+2025-09-05 11:48:35,171 - ERROR - Failed to get ticker '^BSESN' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,196 - ERROR - $^BSESN: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:48:35,197 - ERROR - Error fetching data for SENSEX: No data found for SENSEX
+2025-09-05 11:48:35,197 - INFO - Generating mock data for SENSEX for demonstration purposes
+2025-09-05 11:48:35,202 - INFO - Generated 5 mock records for SENSEX
+2025-09-05 11:48:35,225 - ERROR - Failed to get ticker '^CNXIT' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,266 - ERROR - $^CNXIT: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:48:35,267 - ERROR - Error fetching data for NIFTY_IT: No data found for NIFTY_IT
+2025-09-05 11:48:35,267 - INFO - Generating mock data for NIFTY_IT for demonstration purposes
+2025-09-05 11:48:35,272 - INFO - Generated 5 mock records for NIFTY_IT
+2025-09-05 11:48:35,314 - ERROR - Failed to get ticker '^CNXAUTO' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,344 - ERROR - $^CNXAUTO: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:48:35,345 - ERROR - Error fetching data for NIFTY_AUTO: No data found for NIFTY_AUTO
+2025-09-05 11:48:35,346 - INFO - Generating mock data for NIFTY_AUTO for demonstration purposes
+2025-09-05 11:48:35,351 - INFO - Generated 5 mock records for NIFTY_AUTO
+2025-09-05 11:48:35,373 - ERROR - Failed to get ticker '^CNXPHARMA' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,395 - ERROR - $^CNXPHARMA: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:48:35,396 - ERROR - Error fetching data for NIFTY_PHARMA: No data found for NIFTY_PHARMA
+2025-09-05 11:48:35,397 - INFO - Generating mock data for NIFTY_PHARMA for demonstration purposes
+2025-09-05 11:48:35,401 - INFO - Generated 5 mock records for NIFTY_PHARMA
+2025-09-05 11:48:35,425 - ERROR - Failed to get ticker '^NSEBANK' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,462 - ERROR - $^NSEBANK: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:48:35,464 - ERROR - Error fetching data for BANK_NIFTY: No data found for BANK_NIFTY
+2025-09-05 11:48:35,464 - INFO - Generating mock data for BANK_NIFTY for demonstration purposes
+2025-09-05 11:48:35,469 - INFO - Generated 5 mock records for BANK_NIFTY
+2025-09-05 11:48:35,518 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,571 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1y)
+2025-09-05 11:48:35,572 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:48:35,572 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:48:35,586 - INFO - Generated 262 mock records for NIFTY_50
+2025-09-05 11:48:35,627 - ERROR - Error fetching real-time data for NIFTY_50: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,648 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,670 - ERROR - $^NSEI: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:48:35,672 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:48:35,673 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:48:35,676 - INFO - Generated 5 mock records for NIFTY_50
+2025-09-05 11:48:35,754 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,779 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:48:35,780 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:48:35,780 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:48:35,784 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:48:35,874 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,889 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:48:35,890 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:48:35,890 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:48:35,893 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:48:35,915 - WARNING - Could not fetch options dates for NIFTY_50: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:35,942 - INFO - No options data available for NIFTY_50, generating mock strategy
+2025-09-05 11:48:36,060 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:36,078 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1d)
+2025-09-05 11:48:36,079 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:48:36,079 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:48:36,081 - INFO - Generated 2 mock records for NIFTY_50
+2025-09-05 11:48:36,327 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:36,349 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1y)
+2025-09-05 11:48:36,350 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:48:36,350 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:48:36,360 - INFO - Generated 262 mock records for NIFTY_50
+2025-09-05 11:48:36,441 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:36,460 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:48:36,461 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:48:36,461 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:48:36,465 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:48:36,556 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:36,570 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:48:36,571 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:48:36,571 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:48:36,574 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:48:36,594 - WARNING - Could not fetch options dates for NIFTY_50: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:36,634 - INFO - No options data available for NIFTY_50, generating mock strategy
+2025-09-05 11:48:36,741 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:36,759 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1d)
+2025-09-05 11:48:36,760 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:48:36,761 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:48:36,763 - INFO - Generated 2 mock records for NIFTY_50
+2025-09-05 11:48:36,858 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:48:36,877 - ERROR - $^NSEI: possibly delisted; no price data found  (period=30d)
+2025-09-05 11:48:36,877 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:48:36,878 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:48:36,894 - INFO - Generated 262 mock records for NIFTY_50
+2025-09-05 11:48:37,852 - INFO - Models trained successfully with 252 samples
+2025-09-05 11:51:09,848 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:09,904 - ERROR - $^NSEI: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:09,905 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:09,905 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:09,908 - INFO - Generated 5 mock records for NIFTY_50
+2025-09-05 11:51:10,230 - ERROR - Failed to get ticker '^NSEBANK' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:10,263 - ERROR - $^NSEBANK: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:10,264 - ERROR - Error fetching data for BANK_NIFTY: No data found for BANK_NIFTY
+2025-09-05 11:51:10,264 - INFO - Generating mock data for BANK_NIFTY for demonstration purposes
+2025-09-05 11:51:10,266 - INFO - Generated 5 mock records for BANK_NIFTY
+2025-09-05 11:51:10,390 - ERROR - Failed to get ticker '^BSESN' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:10,455 - ERROR - $^BSESN: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:10,456 - ERROR - Error fetching data for SENSEX: No data found for SENSEX
+2025-09-05 11:51:10,456 - INFO - Generating mock data for SENSEX for demonstration purposes
+2025-09-05 11:51:10,458 - INFO - Generated 5 mock records for SENSEX
+2025-09-05 11:51:10,483 - ERROR - Failed to get ticker '^CNXIT' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:10,532 - ERROR - $^CNXIT: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:10,533 - ERROR - Error fetching data for NIFTY_IT: No data found for NIFTY_IT
+2025-09-05 11:51:10,533 - INFO - Generating mock data for NIFTY_IT for demonstration purposes
+2025-09-05 11:51:10,535 - INFO - Generated 5 mock records for NIFTY_IT
+2025-09-05 11:51:10,565 - ERROR - Failed to get ticker '^CNXAUTO' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:10,589 - ERROR - $^CNXAUTO: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:10,590 - ERROR - Error fetching data for NIFTY_AUTO: No data found for NIFTY_AUTO
+2025-09-05 11:51:10,591 - INFO - Generating mock data for NIFTY_AUTO for demonstration purposes
+2025-09-05 11:51:10,593 - INFO - Generated 5 mock records for NIFTY_AUTO
+2025-09-05 11:51:10,620 - ERROR - Failed to get ticker '^CNXPHARMA' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:10,690 - ERROR - $^CNXPHARMA: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:10,691 - ERROR - Error fetching data for NIFTY_PHARMA: No data found for NIFTY_PHARMA
+2025-09-05 11:51:10,691 - INFO - Generating mock data for NIFTY_PHARMA for demonstration purposes
+2025-09-05 11:51:10,694 - INFO - Generated 5 mock records for NIFTY_PHARMA
+2025-09-05 11:51:10,716 - ERROR - Failed to get ticker '^NSEBANK' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:10,775 - ERROR - $^NSEBANK: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:10,776 - ERROR - Error fetching data for BANK_NIFTY: No data found for BANK_NIFTY
+2025-09-05 11:51:10,777 - INFO - Generating mock data for BANK_NIFTY for demonstration purposes
+2025-09-05 11:51:10,779 - INFO - Generated 5 mock records for BANK_NIFTY
+2025-09-05 11:51:10,806 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:10,861 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1y)
+2025-09-05 11:51:10,862 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:10,864 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:10,874 - INFO - Generated 262 mock records for NIFTY_50
+2025-09-05 11:51:10,925 - ERROR - Error fetching real-time data for NIFTY_50: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:10,976 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:11,017 - ERROR - $^NSEI: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:11,018 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:11,018 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:11,020 - INFO - Generated 5 mock records for NIFTY_50
+2025-09-05 11:51:11,099 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:11,122 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:51:11,123 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:11,123 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:11,126 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:51:11,227 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:11,265 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:51:11,266 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:11,266 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:11,269 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:51:11,334 - WARNING - Could not fetch options dates for NIFTY_50: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:11,356 - INFO - No options data available for NIFTY_50, generating mock strategy
+2025-09-05 11:51:11,398 - ERROR - Error updating positions with live data: 'IndianPortfolioSimulator' object has no attribute 'portfolio_metrics'
+2025-09-05 11:51:11,429 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:11,451 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1d)
+2025-09-05 11:51:11,452 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:11,452 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:11,454 - INFO - Generated 2 mock records for NIFTY_50
+2025-09-05 11:51:11,507 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:11,536 - ERROR - $^NSEI: possibly delisted; no price data found  (period=30d)
+2025-09-05 11:51:11,536 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:11,537 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:11,544 - INFO - Generated 262 mock records for NIFTY_50
+2025-09-05 11:51:12,094 - INFO - Models trained successfully with 252 samples
+2025-09-05 11:51:24,409 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:24,484 - ERROR - $^NSEI: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:24,485 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:24,486 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:24,489 - INFO - Generated 5 mock records for NIFTY_50
+2025-09-05 11:51:24,507 - ERROR - Failed to get ticker '^NSEBANK' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:24,530 - ERROR - $^NSEBANK: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:24,531 - ERROR - Error fetching data for BANK_NIFTY: No data found for BANK_NIFTY
+2025-09-05 11:51:24,531 - INFO - Generating mock data for BANK_NIFTY for demonstration purposes
+2025-09-05 11:51:24,533 - INFO - Generated 5 mock records for BANK_NIFTY
+2025-09-05 11:51:24,687 - ERROR - Failed to get ticker '^BSESN' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:24,733 - ERROR - $^BSESN: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:24,735 - ERROR - Error fetching data for SENSEX: No data found for SENSEX
+2025-09-05 11:51:24,735 - INFO - Generating mock data for SENSEX for demonstration purposes
+2025-09-05 11:51:24,739 - INFO - Generated 5 mock records for SENSEX
+2025-09-05 11:51:24,798 - ERROR - Failed to get ticker '^CNXIT' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:24,867 - ERROR - $^CNXIT: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:24,867 - ERROR - Error fetching data for NIFTY_IT: No data found for NIFTY_IT
+2025-09-05 11:51:24,868 - INFO - Generating mock data for NIFTY_IT for demonstration purposes
+2025-09-05 11:51:24,870 - INFO - Generated 5 mock records for NIFTY_IT
+2025-09-05 11:51:24,897 - ERROR - Failed to get ticker '^CNXAUTO' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:24,913 - ERROR - $^CNXAUTO: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:24,914 - ERROR - Error fetching data for NIFTY_AUTO: No data found for NIFTY_AUTO
+2025-09-05 11:51:24,914 - INFO - Generating mock data for NIFTY_AUTO for demonstration purposes
+2025-09-05 11:51:24,916 - INFO - Generated 5 mock records for NIFTY_AUTO
+2025-09-05 11:51:24,941 - ERROR - Failed to get ticker '^CNXPHARMA' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:24,959 - ERROR - $^CNXPHARMA: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:24,960 - ERROR - Error fetching data for NIFTY_PHARMA: No data found for NIFTY_PHARMA
+2025-09-05 11:51:24,960 - INFO - Generating mock data for NIFTY_PHARMA for demonstration purposes
+2025-09-05 11:51:24,964 - INFO - Generated 5 mock records for NIFTY_PHARMA
+2025-09-05 11:51:24,981 - ERROR - Failed to get ticker '^NSEBANK' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:25,011 - ERROR - $^NSEBANK: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:25,012 - ERROR - Error fetching data for BANK_NIFTY: No data found for BANK_NIFTY
+2025-09-05 11:51:25,013 - INFO - Generating mock data for BANK_NIFTY for demonstration purposes
+2025-09-05 11:51:25,014 - INFO - Generated 5 mock records for BANK_NIFTY
+2025-09-05 11:51:25,048 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:25,099 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1y)
+2025-09-05 11:51:25,100 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:25,100 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:25,105 - INFO - Generated 262 mock records for NIFTY_50
+2025-09-05 11:51:25,140 - ERROR - Error fetching real-time data for NIFTY_50: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:25,183 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:25,209 - ERROR - $^NSEI: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:25,210 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:25,211 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:25,215 - INFO - Generated 5 mock records for NIFTY_50
+2025-09-05 11:51:25,264 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:25,287 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:51:25,288 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:25,288 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:25,291 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:51:25,320 - INFO - Creating chart for NIFTY_50 with 23 data points
+2025-09-05 11:51:25,321 - INFO - Available indicators: ['ema_12', 'ema_26', 'ema_50', 'sma_20', 'sma_50', 'rsi', 'stoch_k', 'stoch_d', 'williams_r', 'cci', 'macd', 'macd_signal', 'macd_hist', 'adx', 'plus_di', 'minus_di', 'bb_upper', 'bb_middle', 'bb_lower', 'atr', 'vwap', 'obv', 'vwap_upper', 'vwap_middle', 'vwap_lower', 'donchian_upper', 'donchian_middle', 'donchian_lower']
+2025-09-05 11:51:25,525 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:25,556 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:51:25,557 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:25,557 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:25,560 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:51:25,586 - WARNING - Could not fetch options dates for NIFTY_50: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:25,601 - INFO - No options data available for NIFTY_50, generating mock strategy
+2025-09-05 11:51:25,677 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:25,730 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1d)
+2025-09-05 11:51:25,731 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:25,731 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:25,733 - INFO - Generated 2 mock records for NIFTY_50
+2025-09-05 11:51:25,832 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:25,858 - ERROR - $^NSEI: possibly delisted; no price data found  (period=30d)
+2025-09-05 11:51:25,859 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:25,859 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:25,866 - INFO - Generated 262 mock records for NIFTY_50
+2025-09-05 11:51:26,298 - INFO - Models trained successfully with 252 samples
+2025-09-05 11:51:42,816 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:42,837 - ERROR - $^NSEI: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:42,838 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:42,838 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:42,840 - INFO - Generated 5 mock records for NIFTY_50
+2025-09-05 11:51:42,857 - ERROR - Failed to get ticker '^NSEBANK' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:42,879 - ERROR - $^NSEBANK: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:42,880 - ERROR - Error fetching data for BANK_NIFTY: No data found for BANK_NIFTY
+2025-09-05 11:51:42,880 - INFO - Generating mock data for BANK_NIFTY for demonstration purposes
+2025-09-05 11:51:42,881 - INFO - Generated 5 mock records for BANK_NIFTY
+2025-09-05 11:51:42,901 - ERROR - Failed to get ticker '^BSESN' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:42,922 - ERROR - $^BSESN: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:42,923 - ERROR - Error fetching data for SENSEX: No data found for SENSEX
+2025-09-05 11:51:42,924 - INFO - Generating mock data for SENSEX for demonstration purposes
+2025-09-05 11:51:42,927 - INFO - Generated 5 mock records for SENSEX
+2025-09-05 11:51:42,958 - ERROR - Failed to get ticker '^CNXIT' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:43,100 - ERROR - $^CNXIT: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:43,101 - ERROR - Error fetching data for NIFTY_IT: No data found for NIFTY_IT
+2025-09-05 11:51:43,102 - INFO - Generating mock data for NIFTY_IT for demonstration purposes
+2025-09-05 11:51:43,104 - INFO - Generated 5 mock records for NIFTY_IT
+2025-09-05 11:51:43,147 - ERROR - Failed to get ticker '^CNXAUTO' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:43,210 - ERROR - $^CNXAUTO: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:43,211 - ERROR - Error fetching data for NIFTY_AUTO: No data found for NIFTY_AUTO
+2025-09-05 11:51:43,212 - INFO - Generating mock data for NIFTY_AUTO for demonstration purposes
+2025-09-05 11:51:43,218 - INFO - Generated 5 mock records for NIFTY_AUTO
+2025-09-05 11:51:43,246 - ERROR - Failed to get ticker '^CNXPHARMA' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:43,267 - ERROR - $^CNXPHARMA: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:43,268 - ERROR - Error fetching data for NIFTY_PHARMA: No data found for NIFTY_PHARMA
+2025-09-05 11:51:43,268 - INFO - Generating mock data for NIFTY_PHARMA for demonstration purposes
+2025-09-05 11:51:43,270 - INFO - Generated 5 mock records for NIFTY_PHARMA
+2025-09-05 11:51:43,286 - ERROR - Failed to get ticker '^NSEBANK' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:43,324 - ERROR - $^NSEBANK: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:43,324 - ERROR - Error fetching data for BANK_NIFTY: No data found for BANK_NIFTY
+2025-09-05 11:51:43,325 - INFO - Generating mock data for BANK_NIFTY for demonstration purposes
+2025-09-05 11:51:43,328 - INFO - Generated 5 mock records for BANK_NIFTY
+2025-09-05 11:51:43,377 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:43,405 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1y)
+2025-09-05 11:51:43,406 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:43,406 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:43,412 - INFO - Generated 262 mock records for NIFTY_50
+2025-09-05 11:51:43,447 - ERROR - Error fetching real-time data for NIFTY_50: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:43,476 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:43,515 - ERROR - $^NSEI: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:43,516 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:43,516 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:43,519 - INFO - Generated 5 mock records for NIFTY_50
+2025-09-05 11:51:43,577 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:43,612 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:51:43,613 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:43,613 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:43,615 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:51:43,813 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:43,841 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:51:43,842 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:43,842 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:43,844 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:51:43,862 - WARNING - Could not fetch options dates for NIFTY_50: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:43,877 - INFO - No options data available for NIFTY_50, generating mock strategy
+2025-09-05 11:51:43,934 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:43,987 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1d)
+2025-09-05 11:51:43,987 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:43,987 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:43,989 - INFO - Generated 2 mock records for NIFTY_50
+2025-09-05 11:51:44,040 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:44,053 - ERROR - $^NSEI: possibly delisted; no price data found  (period=30d)
+2025-09-05 11:51:44,054 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:44,054 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:44,058 - INFO - Generated 262 mock records for NIFTY_50
+2025-09-05 11:51:44,535 - INFO - Models trained successfully with 252 samples
+2025-09-05 11:51:57,047 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:57,082 - ERROR - $^NSEI: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:57,083 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:57,084 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:57,087 - INFO - Generated 5 mock records for NIFTY_50
+2025-09-05 11:51:57,126 - ERROR - Failed to get ticker '^NSEBANK' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:57,341 - ERROR - $^NSEBANK: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:57,341 - ERROR - Error fetching data for BANK_NIFTY: No data found for BANK_NIFTY
+2025-09-05 11:51:57,342 - INFO - Generating mock data for BANK_NIFTY for demonstration purposes
+2025-09-05 11:51:57,343 - INFO - Generated 5 mock records for BANK_NIFTY
+2025-09-05 11:51:57,375 - ERROR - Failed to get ticker '^BSESN' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:57,403 - ERROR - $^BSESN: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:57,404 - ERROR - Error fetching data for SENSEX: No data found for SENSEX
+2025-09-05 11:51:57,404 - INFO - Generating mock data for SENSEX for demonstration purposes
+2025-09-05 11:51:57,405 - INFO - Generated 5 mock records for SENSEX
+2025-09-05 11:51:57,476 - ERROR - Failed to get ticker '^CNXIT' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:57,493 - ERROR - $^CNXIT: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:57,494 - ERROR - Error fetching data for NIFTY_IT: No data found for NIFTY_IT
+2025-09-05 11:51:57,495 - INFO - Generating mock data for NIFTY_IT for demonstration purposes
+2025-09-05 11:51:57,496 - INFO - Generated 5 mock records for NIFTY_IT
+2025-09-05 11:51:57,543 - ERROR - Failed to get ticker '^CNXAUTO' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:57,618 - ERROR - $^CNXAUTO: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:57,619 - ERROR - Error fetching data for NIFTY_AUTO: No data found for NIFTY_AUTO
+2025-09-05 11:51:57,619 - INFO - Generating mock data for NIFTY_AUTO for demonstration purposes
+2025-09-05 11:51:57,621 - INFO - Generated 5 mock records for NIFTY_AUTO
+2025-09-05 11:51:57,653 - ERROR - Failed to get ticker '^CNXPHARMA' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:57,688 - ERROR - $^CNXPHARMA: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:57,689 - ERROR - Error fetching data for NIFTY_PHARMA: No data found for NIFTY_PHARMA
+2025-09-05 11:51:57,690 - INFO - Generating mock data for NIFTY_PHARMA for demonstration purposes
+2025-09-05 11:51:57,693 - INFO - Generated 5 mock records for NIFTY_PHARMA
+2025-09-05 11:51:57,710 - ERROR - Failed to get ticker '^NSEBANK' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:57,744 - ERROR - $^NSEBANK: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:57,745 - ERROR - Error fetching data for BANK_NIFTY: No data found for BANK_NIFTY
+2025-09-05 11:51:57,745 - INFO - Generating mock data for BANK_NIFTY for demonstration purposes
+2025-09-05 11:51:57,747 - INFO - Generated 5 mock records for BANK_NIFTY
+2025-09-05 11:51:57,771 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:57,817 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1y)
+2025-09-05 11:51:57,817 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:57,818 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:57,823 - INFO - Generated 262 mock records for NIFTY_50
+2025-09-05 11:51:57,856 - ERROR - Error fetching real-time data for NIFTY_50: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:57,873 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:57,889 - ERROR - $^NSEI: possibly delisted; no price data found  (period=5d)
+2025-09-05 11:51:57,890 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:57,890 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:57,892 - INFO - Generated 5 mock records for NIFTY_50
+2025-09-05 11:51:57,929 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:57,976 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:51:57,977 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:57,977 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:57,978 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:51:58,003 - INFO - Creating chart for NIFTY_50 with 23 data points
+2025-09-05 11:51:58,003 - INFO - Available indicators: ['ema_12', 'ema_26', 'ema_50', 'sma_20', 'sma_50', 'rsi', 'stoch_k', 'stoch_d', 'williams_r', 'cci', 'macd', 'macd_signal', 'macd_hist', 'adx', 'plus_di', 'minus_di', 'bb_upper', 'bb_middle', 'bb_lower', 'atr', 'vwap', 'obv', 'vwap_upper', 'vwap_middle', 'vwap_lower', 'donchian_upper', 'donchian_middle', 'donchian_lower']
+2025-09-05 11:51:58,087 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:58,103 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1mo)
+2025-09-05 11:51:58,104 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:58,104 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:58,107 - INFO - Generated 23 mock records for NIFTY_50
+2025-09-05 11:51:58,125 - WARNING - Could not fetch options dates for NIFTY_50: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:58,139 - INFO - No options data available for NIFTY_50, generating mock strategy
+2025-09-05 11:51:58,196 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:58,238 - ERROR - $^NSEI: possibly delisted; no price data found  (period=1d)
+2025-09-05 11:51:58,239 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:58,239 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:58,240 - INFO - Generated 2 mock records for NIFTY_50
+2025-09-05 11:51:58,280 - ERROR - Failed to get ticker '^NSEI' reason: Failed to perform, curl: (60) SSL certificate problem: self signed certificate in certificate chain. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+2025-09-05 11:51:58,296 - ERROR - $^NSEI: possibly delisted; no price data found  (period=30d)
+2025-09-05 11:51:58,297 - ERROR - Error fetching data for NIFTY_50: No data found for NIFTY_50
+2025-09-05 11:51:58,297 - INFO - Generating mock data for NIFTY_50 for demonstration purposes
+2025-09-05 11:51:58,305 - INFO - Generated 262 mock records for NIFTY_50
+2025-09-05 11:51:58,856 - INFO - Models trained successfully with 252 samples
