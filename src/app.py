@@ -27,18 +27,26 @@ from email.mime.base import MIMEBase
 from email import encoders
 import base64
 
-# Add src to path for imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Import helper for robust module loading
+from import_helper import import_config, import_module
 
-# Import our structured modules
-from data.indian_market_data import IndianMarketDataFetcher, INDIAN_MARKET_SYMBOLS
-from analysis.indian_technical_analysis import IndianMarketAnalyzer
-from analysis.indian_backtesting import IndianBacktestingEngine, BacktestConfig
-from analysis.live_prediction_engine import LivePredictionEngine, PredictionResult, MarketEntrySignal
-from options.indian_options_engine import IndianOptionsStrategyEngine, OptionsStrategy, OptionsContract
-from portfolio.indian_portfolio_simulator import IndianPortfolioSimulator, Position, PortfolioMetrics
-from visualization.indian_visualization import IndianMarketVisualizer
-from config.config import get_config, get_indian_market_strategies, get_lot_size
+# Import our structured modules using the helper
+IndianMarketDataFetcher = import_module('data.indian_market_data', 'IndianMarketDataFetcher')
+INDIAN_MARKET_SYMBOLS = import_module('data.indian_market_data', 'INDIAN_MARKET_SYMBOLS')
+IndianMarketAnalyzer = import_module('analysis.indian_technical_analysis', 'IndianMarketAnalyzer')
+IndianBacktestingEngine = import_module('analysis.indian_backtesting', 'IndianBacktestingEngine')
+BacktestConfig = import_module('analysis.indian_backtesting', 'BacktestConfig')
+LivePredictionEngine = import_module('analysis.live_prediction_engine', 'LivePredictionEngine')
+PredictionResult = import_module('analysis.live_prediction_engine', 'PredictionResult')
+MarketEntrySignal = import_module('analysis.live_prediction_engine', 'MarketEntrySignal')
+IndianOptionsStrategyEngine = import_module('options.indian_options_engine', 'IndianOptionsStrategyEngine')
+OptionsStrategy = import_module('options.indian_options_engine', 'OptionsStrategy')
+OptionsContract = import_module('options.indian_options_engine', 'OptionsContract')
+IndianPortfolioSimulator = import_module('portfolio.indian_portfolio_simulator', 'IndianPortfolioSimulator')
+Position = import_module('portfolio.indian_portfolio_simulator', 'Position')
+PortfolioMetrics = import_module('portfolio.indian_portfolio_simulator', 'PortfolioMetrics')
+IndianMarketVisualizer = import_module('visualization.indian_visualization', 'IndianMarketVisualizer')
+get_config = import_config
 
 # Configure logging
 logging.basicConfig(
@@ -517,6 +525,47 @@ class IndianTradingApp:
         
         except Exception as e:
             st.sidebar.error(f"Error fetching market status: {e}")
+        
+        # API Status
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🔑 API Status")
+        self._show_api_status()
+    
+    def _show_api_status(self):
+        """Show API key configuration status"""
+        try:
+            config = get_config()
+        except Exception as e:
+            st.error(f"Configuration error: {e}")
+            return
+        
+        # Check API key status
+        api_status = {
+            'News API': config.NEWS_API_KEY != "your_news_api_key_here",
+            'Alpha Vantage': config.ALPHA_VANTAGE_API_KEY != "your_alpha_vantage_api_key_here",
+            'Quandl': config.QUANDL_API_KEY != "your_quandl_api_key_here",
+            'Finnhub': config.FINNHUB_API_KEY != "your_finnhub_api_key_here",
+            'Polygon': config.POLYGON_API_KEY != "your_polygon_api_key_here",
+            'Twitter': config.TWITTER_API_KEY != "your_twitter_api_key_here"
+        }
+        
+        # Display status
+        for api_name, is_configured in api_status.items():
+            if is_configured:
+                st.sidebar.success(f"✅ {api_name}")
+            else:
+                st.sidebar.warning(f"⚠️ {api_name}")
+        
+        # Show configuration help
+        with st.sidebar.expander("🔧 Configure APIs"):
+            st.markdown("""
+            **To configure API keys:**
+            1. Edit `src/config/config.py`
+            2. Replace placeholder values
+            3. Restart the application
+            
+            **See:** `API_KEYS_SETUP.md` for detailed guide
+            """)
     
     def _show_market_overview(self):
         """Show market overview dashboard"""
@@ -570,7 +619,7 @@ class IndianTradingApp:
                 st.error("Unable to fetch market data. Please try again later.")
                 return
             
-            # Display key metrics
+            # Display key metrics with timestamps
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
@@ -581,6 +630,7 @@ class IndianTradingApp:
                         f"₹{nifty_data['current_price']:,.0f}",
                         f"{nifty_data['change_percent']:+.2f}%"
                     )
+                    st.caption(f"Updated: {datetime.now().strftime('%H:%M:%S')}")
             
             with col2:
                 if 'BANK_NIFTY' in overview_data:
@@ -590,6 +640,7 @@ class IndianTradingApp:
                         f"₹{bank_nifty_data['current_price']:,.0f}",
                         f"{bank_nifty_data['change_percent']:+.2f}%"
                     )
+                    st.caption(f"Updated: {datetime.now().strftime('%H:%M:%S')}")
             
             with col3:
                 if 'SENSEX' in overview_data:
@@ -599,6 +650,7 @@ class IndianTradingApp:
                         f"₹{sensex_data['current_price']:,.0f}",
                         f"{sensex_data['change_percent']:+.2f}%"
                     )
+                    st.caption(f"Updated: {datetime.now().strftime('%H:%M:%S')}")
             
             with col4:
                 # Market volatility
@@ -610,8 +662,10 @@ class IndianTradingApp:
                             f"{volatility_data.get('annualized_volatility', 0)*100:.1f}%",
                             f"30d: {volatility_data.get('current_30d_volatility', 0)*100:.1f}%"
                         )
+                        st.caption(f"Updated: {datetime.now().strftime('%H:%M:%S')}")
                 except:
                     st.metric("Market Volatility", "N/A", "N/A")
+                    st.caption(f"Updated: {datetime.now().strftime('%H:%M:%S')}")
             
             # Real-time data section
             col1, col2 = st.columns([3, 1])
@@ -814,13 +868,6 @@ class IndianTradingApp:
             )
             
             try:
-                # Debug information
-                st.write(f"**Debug Info:**")
-                st.write(f"- Data shape: {data.shape}")
-                st.write(f"- Data columns: {list(data.columns)}")
-                st.write(f"- Analysis keys: {list(analysis.keys()) if analysis else 'No analysis data'}")
-                st.write(f"- Chart type: {chart_type}")
-                
                 if chart_type == "Simple Test Chart":
                     # Show simple test chart
                     chart = self.visualizer.create_simple_test_chart(data, symbol)
@@ -839,11 +886,6 @@ class IndianTradingApp:
                     chart = self.visualizer.create_indian_technical_analysis_chart(
                         data, analysis['indicators'], symbol
                     )
-                
-                st.write(f"- Chart created: {chart is not None}")
-                if chart:
-                    st.write(f"- Chart data length: {len(chart.data)}")
-                    st.write(f"- Chart data types: {[trace.type for trace in chart.data]}")
                 
                 if chart and len(chart.data) > 0:
                     st.plotly_chart(chart, use_container_width=True)
@@ -1323,8 +1365,8 @@ class IndianTradingApp:
             # Display prediction results
             st.subheader("📊 Price Predictions")
             
-            # Key metrics
-            col1, col2, col3, col4 = st.columns(4)
+            # Current price
+            col1, col2, col3, col4, col5 = st.columns(5)
             
             with col1:
                 st.metric(
@@ -1334,6 +1376,24 @@ class IndianTradingApp:
                 )
             
             with col2:
+                change_1m = prediction.predicted_price_1m - prediction.current_price
+                st.metric(
+                    "1m Prediction",
+                    f"₹{prediction.predicted_price_1m:,.2f}",
+                    delta=f"{change_1m:+.2f}",
+                    delta_color="normal"
+                )
+            
+            with col3:
+                change_2m = prediction.predicted_price_2m - prediction.current_price
+                st.metric(
+                    "2m Prediction",
+                    f"₹{prediction.predicted_price_2m:,.2f}",
+                    delta=f"{change_2m:+.2f}",
+                    delta_color="normal"
+                )
+            
+            with col4:
                 change_5m = prediction.predicted_price_5m - prediction.current_price
                 st.metric(
                     "5m Prediction",
@@ -1342,7 +1402,7 @@ class IndianTradingApp:
                     delta_color="normal"
                 )
             
-            with col3:
+            with col5:
                 change_10m = prediction.predicted_price_10m - prediction.current_price
                 st.metric(
                     "10m Prediction",
@@ -1351,11 +1411,35 @@ class IndianTradingApp:
                     delta_color="normal"
                 )
             
-            with col4:
-                confidence_avg = (prediction.confidence_5m + prediction.confidence_10m) / 2
+            # Confidence metrics
+            st.subheader("🎯 Prediction Confidence")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
                 st.metric(
-                    "Avg Confidence",
-                    f"{confidence_avg:.1%}",
+                    "1m Confidence",
+                    f"{prediction.confidence_1m:.1%}",
+                    delta=None
+                )
+            
+            with col2:
+                st.metric(
+                    "2m Confidence",
+                    f"{prediction.confidence_2m:.1%}",
+                    delta=None
+                )
+            
+            with col3:
+                st.metric(
+                    "5m Confidence",
+                    f"{prediction.confidence_5m:.1%}",
+                    delta=None
+                )
+            
+            with col4:
+                st.metric(
+                    "10m Confidence",
+                    f"{prediction.confidence_10m:.1%}",
                     delta=None
                 )
             
@@ -1366,8 +1450,12 @@ class IndianTradingApp:
                 # Price prediction chart
                 prediction_data = {
                     'current_price': prediction.current_price,
+                    'predicted_price_1m': prediction.predicted_price_1m,
+                    'predicted_price_2m': prediction.predicted_price_2m,
                     'predicted_price_5m': prediction.predicted_price_5m,
                     'predicted_price_10m': prediction.predicted_price_10m,
+                    'confidence_1m': prediction.confidence_1m,
+                    'confidence_2m': prediction.confidence_2m,
                     'confidence_5m': prediction.confidence_5m,
                     'confidence_10m': prediction.confidence_10m,
                     'timestamp': prediction.timestamp
@@ -1411,22 +1499,20 @@ class IndianTradingApp:
             
             with col2:
                 # Direction analysis
-                st.markdown("""
+                st.markdown(f"""
                 <div style="padding: 20px; border-radius: 10px; background-color: #f0f2f6; border-left: 5px solid #1f77b4;">
                     <h3 style="color: #1f77b4; margin-top: 0;">Direction Analysis</h3>
-                    <p><strong>5m Direction:</strong> {}</p>
-                    <p><strong>10m Direction:</strong> {}</p>
-                    <p><strong>Risk Level:</strong> {}</p>
-                    <p><strong>5m Confidence:</strong> {:.1%}</p>
-                    <p><strong>10m Confidence:</strong> {:.1%}</p>
+                    <p><strong>1m Direction:</strong> {prediction.direction_1m}</p>
+                    <p><strong>2m Direction:</strong> {prediction.direction_2m}</p>
+                    <p><strong>5m Direction:</strong> {prediction.direction_5m}</p>
+                    <p><strong>10m Direction:</strong> {prediction.direction_10m}</p>
+                    <p><strong>Risk Level:</strong> {prediction.risk_level}</p>
+                    <p><strong>1m Confidence:</strong> {prediction.confidence_1m:.1%}</p>
+                    <p><strong>2m Confidence:</strong> {prediction.confidence_2m:.1%}</p>
+                    <p><strong>5m Confidence:</strong> {prediction.confidence_5m:.1%}</p>
+                    <p><strong>10m Confidence:</strong> {prediction.confidence_10m:.1%}</p>
                 </div>
-                """.format(
-                    prediction.direction_5m,
-                    prediction.direction_10m,
-                    prediction.risk_level,
-                    prediction.confidence_5m,
-                    prediction.confidence_10m
-                ), unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
             
             # Trading recommendations
             st.subheader("💡 Trading Recommendations")
@@ -1459,9 +1545,9 @@ class IndianTradingApp:
                 st.warning(f"""
                 **🟡 HOLD RECOMMENDATION**
                 
-                - **Current Price:</strong> ₹{prediction.current_price:,.2f}
-                - **Confidence:</strong> {entry_signal.confidence:.1%}
-                - **Risk Level:</strong> {prediction.risk_level}
+                - **Current Price:** ₹{prediction.current_price:,.2f}
+                - **Confidence:** {entry_signal.confidence:.1%}
+                - **Risk Level:** {prediction.risk_level}
                 
                 **Strategy:** Market conditions are unclear. Wait for better entry opportunity.
                 """)
@@ -1470,12 +1556,16 @@ class IndianTradingApp:
             st.subheader("📈 Model Performance")
             accuracy = self.prediction_engine.get_prediction_accuracy()
             
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4, col5 = st.columns(5)
             with col1:
-                st.metric("5m Accuracy", f"{accuracy['accuracy_5m']:.1%}")
+                st.metric("1m Accuracy", f"{accuracy.get('accuracy_1m', 0):.1%}")
             with col2:
-                st.metric("10m Accuracy", f"{accuracy['accuracy_10m']:.1%}")
+                st.metric("2m Accuracy", f"{accuracy.get('accuracy_2m', 0):.1%}")
             with col3:
+                st.metric("5m Accuracy", f"{accuracy['accuracy_5m']:.1%}")
+            with col4:
+                st.metric("10m Accuracy", f"{accuracy['accuracy_10m']:.1%}")
+            with col5:
                 st.metric("Total Predictions", accuracy['total_predictions'])
             
             # Auto-refresh functionality
