@@ -1147,6 +1147,17 @@ class IndianTradingApp:
             st.error(f"Error in options strategies: {e}")
             logger.error(f"Error in options strategies: {e}")
     
+    def _get_live_market_data_safe(self, portfolio_simulator, data_fetcher):
+        """Safe method to get live market data with fallback"""
+        try:
+            if hasattr(portfolio_simulator, 'get_live_market_data'):
+                return portfolio_simulator.get_live_market_data(data_fetcher)
+            else:
+                return {}
+        except Exception as e:
+            logger.error(f"Error getting live market data: {e}")
+            return {}
+    
     def _show_portfolio_management(self):
         """Show portfolio management with live paper trading"""
         st.header("💼 Portfolio Management")
@@ -1175,7 +1186,7 @@ class IndianTradingApp:
             # Get live market data and update positions
             with st.spinner("🔄 Updating positions with live market data..."):
                 # Get live market prices
-                live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                live_prices = self._get_live_market_data_safe(st.session_state.portfolio_simulator, self.data_fetcher)
                 
                 # Calculate real-time metrics
                 real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
@@ -1296,11 +1307,7 @@ class IndianTradingApp:
             if portfolio_summary:
                 capital_util = portfolio_summary.get('capital_utilization', {})
                 # Get live prices first
-                try:
-                    live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
-                except AttributeError:
-                    # Fallback if method doesn't exist
-                    live_prices = {}
+                live_prices = self._get_live_market_data_safe(st.session_state.portfolio_simulator, self.data_fetcher)
                 real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
                 
                 col_cap1, col_cap2, col_cap3, col_cap4 = st.columns(4)
@@ -1431,11 +1438,7 @@ class IndianTradingApp:
                 st.subheader("📊 Capital Utilization Report")
                 portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
                 # Get live prices for real-time metrics
-                try:
-                    live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
-                except AttributeError:
-                    # Fallback if method doesn't exist
-                    live_prices = {}
+                live_prices = self._get_live_market_data_safe(st.session_state.portfolio_simulator, self.data_fetcher)
                 real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
                 
                 if portfolio_summary:
@@ -1483,11 +1486,7 @@ class IndianTradingApp:
             portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
             if portfolio_summary:
                 # Get real-time metrics for accurate display
-                try:
-                    live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
-                except AttributeError:
-                    # Fallback if method doesn't exist
-                    live_prices = {}
+                live_prices = self._get_live_market_data_safe(st.session_state.portfolio_simulator, self.data_fetcher)
                 real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
                 
                 col1, col2, col3 = st.columns(3)
@@ -1538,11 +1537,7 @@ class IndianTradingApp:
                         
                         # Get current available capital
                         portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
-                        try:
-                            live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
-                        except AttributeError:
-                            # Fallback if method doesn't exist
-                            live_prices = {}
+                        live_prices = self._get_live_market_data_safe(st.session_state.portfolio_simulator, self.data_fetcher)
                         real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
                         available_capital = real_time_metrics.get('available_capital', 0)
                         
@@ -1581,11 +1576,7 @@ class IndianTradingApp:
                             else:
                                 # Get current capital status for better error message
                                 portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
-                                try:
-                                    live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
-                                except AttributeError:
-                                    # Fallback if method doesn't exist
-                                    live_prices = {}
+                                live_prices = self._get_live_market_data_safe(st.session_state.portfolio_simulator, self.data_fetcher)
                                 real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
                                 available_capital = real_time_metrics.get('available_capital', 0)
                                 
