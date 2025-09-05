@@ -1164,10 +1164,23 @@ class IndianTradingApp:
                 st.rerun()
         with col3:
             auto_refresh_portfolio = st.checkbox("Auto Refresh (10s)", value=True, key="auto_refresh_portfolio")
+            
+            # Auto-refresh logic
+            if auto_refresh_portfolio:
+                import time
+                time.sleep(10)  # Wait 10 seconds
+                st.rerun()
         
         try:
-            # Update all positions with live data
-            with st.spinner("Updating positions with live market data..."):
+            # Get live market data and update positions
+            with st.spinner("🔄 Updating positions with live market data..."):
+                # Get live market prices
+                live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                
+                # Calculate real-time metrics
+                real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
+                
+                # Update positions with live data
                 live_data = st.session_state.portfolio_simulator.update_all_positions_with_live_data(self.data_fetcher)
             
             # Portfolio summary
@@ -1177,43 +1190,67 @@ class IndianTradingApp:
                 st.warning("No portfolio data available")
                 return
             
-            # Key metrics with live data
+            # Real-time portfolio metrics
+            st.subheader("📊 Real-Time Portfolio Metrics")
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                total_value = live_data.get('total_value', portfolio_summary['total_value'])
+                total_value = real_time_metrics.get('total_value', portfolio_summary.get('total_value', 0))
                 st.metric(
-                    "Total Value",
+                    "Total Portfolio Value",
                     f"₹{total_value:,.0f}",
-                    f"₹{live_data.get('total_unrealized_pnl', 0):,.0f}"
+                    delta=f"₹{real_time_metrics.get('unrealized_pnl', 0):,.0f}"
                 )
             
             with col2:
-                total_pnl = live_data.get('total_unrealized_pnl', portfolio_summary['total_pnl'])
-                total_pnl_percent = live_data.get('total_pnl_percent', portfolio_summary['total_pnl_percent'])
+                total_pnl = real_time_metrics.get('total_pnl', 0)
+                total_pnl_percent = real_time_metrics.get('total_pnl_percent', 0)
                 st.metric(
                     "Total P&L",
                     f"₹{total_pnl:,.0f}",
-                    f"{total_pnl_percent:+.2f}%"
+                    delta=f"{total_pnl_percent:+.2f}%"
                 )
             
             with col3:
-                unrealized_pnl = live_data.get('total_unrealized_pnl', portfolio_summary['unrealized_pnl'])
-                unrealized_pnl_percent = live_data.get('total_pnl_percent', portfolio_summary['unrealized_pnl_percent'])
+                margin_used = real_time_metrics.get('margin_used', 0)
+                available_capital = real_time_metrics.get('available_capital', 0)
                 st.metric(
-                    "Unrealized P&L",
-                    f"₹{unrealized_pnl:,.0f}",
-                    f"{unrealized_pnl_percent:+.2f}%"
+                    "Margin Used",
+                    f"₹{margin_used:,.0f}",
+                    delta=f"₹{available_capital:,.0f} available"
                 )
             
             with col4:
-                available_capital = portfolio_summary['capital_utilization']['available_capital']
-                margin_used = portfolio_summary['capital_utilization']['margin_used']
+                position_count = real_time_metrics.get('position_count', 0)
                 st.metric(
-                    "Available Capital",
-                    f"₹{available_capital:,.0f}",
-                    f"₹{margin_used:,.0f}"
+                    "Open Positions",
+                    position_count
                 )
+            
+            # Portfolio performance indicator
+            total_pnl = real_time_metrics.get('total_pnl', 0)
+            total_pnl_percent = real_time_metrics.get('total_pnl_percent', 0)
+            
+            if total_pnl > 0:
+                st.success(f"🎉 Portfolio is up ₹{total_pnl:,.2f} ({total_pnl_percent:+.2f}%)")
+            elif total_pnl < 0:
+                st.error(f"📉 Portfolio is down ₹{abs(total_pnl):,.2f} ({total_pnl_percent:+.2f}%)")
+            else:
+                st.info("📊 Portfolio is at break-even")
+            
+            # Live market prices
+            if real_time_metrics.get('live_prices'):
+                st.subheader("📈 Live Market Prices")
+                live_prices = real_time_metrics['live_prices']
+                price_cols = st.columns(len(live_prices))
+                
+                for i, (symbol, price) in enumerate(live_prices.items()):
+                    with price_cols[i]:
+                        st.metric(
+                            symbol,
+                            f"₹{price:,.2f}",
+                            delta=f"Live"
+                        )
             
             # Current positions with live P&L
             st.subheader("📊 Current Positions")
@@ -1224,7 +1261,7 @@ class IndianTradingApp:
             if open_positions:
                 # Display positions in expandable cards
                 for position in open_positions:
-                    with st.expander(f"{position['symbol']} - {position['position_type']} ({position['quantity']} lots)"):
+                    with st.expander(f"📊 {position['symbol']} - {position['strategy']} ({position['quantity']} lots)", expanded=True):
                         col1, col2, col3 = st.columns(3)
                         
                         with col1:
@@ -1249,8 +1286,210 @@ class IndianTradingApp:
             else:
                 st.info("No open positions")
             
+            # Dynamic Capital Management
+            st.subheader("💰 Capital Management")
+            st.info("📊 **Margin Structure:** Using NIFTY 50 margin requirements (12%) for all instruments")
+            
+            # Real-time capital display with live updates
+            # Get fresh portfolio summary to ensure we have the latest capital values
+            portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
+            if portfolio_summary:
+                capital_util = portfolio_summary.get('capital_utilization', {})
+                # Get live prices first
+                live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
+                
+                col_cap1, col_cap2, col_cap3, col_cap4 = st.columns(4)
+                
+                with col_cap1:
+                    # Use the actual current capital from the simulator, not cached values
+                    total_capital = st.session_state.portfolio_simulator.initial_capital
+                    st.metric("💰 Total Capital", f"₹{total_capital:,.2f}")
+                
+                with col_cap2:
+                    available_capital = real_time_metrics.get('available_capital', 0)
+                    st.metric("💵 Available Capital", f"₹{available_capital:,.2f}")
+                
+                with col_cap3:
+                    margin_used = real_time_metrics.get('margin_used', 0)
+                    st.metric("📊 Margin Used", f"₹{margin_used:,.2f}")
+                
+                with col_cap4:
+                    utilization_percent = (margin_used / total_capital * 100) if total_capital > 0 else 0
+                    st.metric("📈 Capital Utilization", f"{utilization_percent:.1f}%")
+                
+                # Add auto-refresh for real-time updates
+                col_refresh1, col_refresh2 = st.columns(2)
+                with col_refresh1:
+                    if st.button("🔄 Refresh Portfolio", help="Update portfolio with latest market data"):
+                        st.rerun()
+                with col_refresh2:
+                    if st.button("💰 Update Capital", help="Refresh capital calculations"):
+                        st.rerun()
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if st.button("➕ Add Capital", help="Add more capital to your portfolio"):
+                    st.session_state.show_add_capital = True
+            
+            with col2:
+                if st.button("🔄 Reset Capital", help="Reset portfolio with new capital amount"):
+                    st.session_state.show_reset_capital = True
+            
+            with col3:
+                if st.button("📊 Capital Report", help="View detailed capital utilization"):
+                    st.session_state.show_capital_report = True
+            
+            # Quick capital boost for testing
+            st.write("**Quick Capital Boost (for testing):**")
+            col_boost1, col_boost2, col_boost3, col_boost4 = st.columns(4)
+            
+            with col_boost1:
+                if st.button("+₹10K", help="Add ₹10,000", key="boost_10k"):
+                    success = st.session_state.portfolio_simulator.add_capital(10000)
+                    if success:
+                        st.success("✅ Added ₹10,000!")
+                        st.balloons()
+                    st.rerun()
+            
+            with col_boost2:
+                if st.button("+₹25K", help="Add ₹25,000", key="boost_25k"):
+                    success = st.session_state.portfolio_simulator.add_capital(25000)
+                    if success:
+                        st.success("✅ Added ₹25,000!")
+                        st.balloons()
+                    st.rerun()
+            
+            with col_boost3:
+                if st.button("+₹50K", help="Add ₹50,000", key="boost_50k"):
+                    success = st.session_state.portfolio_simulator.add_capital(50000)
+                    if success:
+                        st.success("✅ Added ₹50,000!")
+                        st.balloons()
+                    st.rerun()
+            
+            with col_boost4:
+                if st.button("+₹1L", help="Add ₹1,00,000", key="boost_1l"):
+                    success = st.session_state.portfolio_simulator.add_capital(100000)
+                    if success:
+                        st.success("✅ Added ₹1,00,000!")
+                        st.balloons()
+                    st.rerun()
+            
+            # Removed custom amount input as requested
+            
+            # Add Capital Form
+            if st.session_state.get('show_add_capital', False):
+                with st.form("add_capital_form"):
+                    st.write("**Add Capital to Portfolio**")
+                    add_amount = st.number_input("Amount to Add (₹)", min_value=1000, value=10000, step=1000)
+                    
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        if st.form_submit_button("Add Capital"):
+                            success = st.session_state.portfolio_simulator.add_capital(add_amount)
+                            if success:
+                                st.success(f"✅ Added ₹{add_amount:,.2f} to portfolio!")
+                                st.rerun()
+                            else:
+                                st.error("❌ Failed to add capital")
+                    
+                    with col_b:
+                        if st.form_submit_button("Cancel"):
+                            st.session_state.show_add_capital = False
+                            st.rerun()
+            
+            # Reset Capital Form
+            if st.session_state.get('show_reset_capital', False):
+                with st.form("reset_capital_form"):
+                    st.write("**Reset Portfolio Capital**")
+                    st.warning("⚠️ This will close all positions and reset your portfolio!")
+                    new_capital = st.number_input("New Capital Amount (₹)", min_value=10000, value=100000, step=10000)
+                    
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        if st.form_submit_button("Reset Portfolio"):
+                            success = st.session_state.portfolio_simulator.reset_capital(new_capital)
+                            if success:
+                                st.success(f"✅ Portfolio reset with ₹{new_capital:,.2f}!")
+                                st.rerun()
+                            else:
+                                st.error("❌ Failed to reset portfolio")
+                    
+                    with col_b:
+                        if st.form_submit_button("Cancel"):
+                            st.session_state.show_reset_capital = False
+                            st.rerun()
+            
+            # Capital Report
+            if st.session_state.get('show_capital_report', False):
+                st.subheader("📊 Capital Utilization Report")
+                portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
+                # Get live prices for real-time metrics
+                live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
+                
+                if portfolio_summary:
+                    capital_util = portfolio_summary.get('capital_utilization', {})
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        # Use current capital from simulator
+                        current_capital = st.session_state.portfolio_simulator.initial_capital
+                        st.metric("Total Capital", f"₹{current_capital:,.2f}")
+                    with col2:
+                        st.metric("Available Capital", f"₹{real_time_metrics.get('available_capital', 0):,.2f}")
+                    with col3:
+                        st.metric("Margin Used", f"₹{real_time_metrics.get('margin_used', 0):,.2f}")
+                    with col4:
+                        utilization = (real_time_metrics.get('margin_used', 0) / current_capital * 100)
+                        st.metric("Utilization", f"{utilization:.1f}%")
+                    
+                    # Additional portfolio metrics
+                    st.write("**📈 Portfolio Performance:**")
+                    col_perf1, col_perf2, col_perf3 = st.columns(3)
+                    with col_perf1:
+                        st.metric("Total Value", f"₹{real_time_metrics.get('total_value', 0):,.2f}")
+                    with col_perf2:
+                        st.metric("Total P&L", f"₹{real_time_metrics.get('total_pnl', 0):,.2f}")
+                    with col_perf3:
+                        st.metric("P&L %", f"{real_time_metrics.get('total_pnl_percent', 0):+.2f}%")
+                    
+                    # Capital transaction history
+                    st.write("**📋 Recent Capital Transactions:**")
+                    if hasattr(st.session_state.portfolio_simulator, 'capital_transactions') and st.session_state.portfolio_simulator.capital_transactions:
+                        for transaction in st.session_state.portfolio_simulator.capital_transactions[-5:]:  # Show last 5
+                            st.write(f"• {transaction['timestamp']}: {transaction['type']} ₹{transaction['amount']:,.2f}")
+                    else:
+                        st.write("• No transaction history available")
+                    
+                    if st.button("Close Report"):
+                        st.session_state.show_capital_report = False
+                        st.rerun()
+            
             # Add new position
             st.subheader("➕ Add New Position")
+            
+            # Show current portfolio status
+            portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
+            if portfolio_summary:
+                # Get real-time metrics for accurate display
+                live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    available_capital = real_time_metrics.get('available_capital', 0)
+                    st.metric("Available Capital", f"₹{available_capital:,.2f}")
+                with col2:
+                    margin_used = real_time_metrics.get('margin_used', 0)
+                    st.metric("Margin Used", f"₹{margin_used:,.2f}")
+                with col3:
+                    unrealized_pnl = real_time_metrics.get('unrealized_pnl', 0)
+                    unrealized_pnl_percent = real_time_metrics.get('unrealized_pnl_percent', 0)
+                    st.metric("Unrealized P&L", f"₹{unrealized_pnl:,.2f}", 
+                             delta=f"{unrealized_pnl_percent:+.2f}%")
             
             with st.form("add_position"):
                 col1, col2, col3, col4 = st.columns(4)
@@ -1259,7 +1498,7 @@ class IndianTradingApp:
                     symbol = st.selectbox("Symbol", list(INDIAN_MARKET_SYMBOLS.keys()))
                 
                 with col2:
-                    quantity = st.number_input("Quantity", min_value=1, value=1)
+                    quantity = st.number_input("Quantity (Lots)", min_value=1, value=1, help="Number of lots to trade")
                 
                 with col3:
                     # Get current market price for the selected symbol
@@ -1276,19 +1515,65 @@ class IndianTradingApp:
                 with col4:
                     position_type = st.selectbox("Type", ["Long", "Short"])
                 
+                # Show estimated margin requirement
+                if symbol and quantity and entry_price:
+                    try:
+                        lot_size = st.session_state.portfolio_simulator.lot_sizes.get(symbol, 50)
+                        notional_value = quantity * lot_size * entry_price
+                        # Use NIFTY 50 margin requirements (12%)
+                        margin_rate = st.session_state.portfolio_simulator.margin_requirements.get(symbol, 0.12)
+                        estimated_margin = notional_value * margin_rate
+                        
+                        # Get current available capital
+                        portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
+                        live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                        real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
+                        available_capital = real_time_metrics.get('available_capital', 0)
+                        
+                        # Color code based on capital availability
+                        if estimated_margin <= available_capital:
+                            st.success(f"✅ **Estimated Margin Required:** ₹{estimated_margin:,.2f} (Lot Size: {lot_size}, Notional: ₹{notional_value:,.2f})")
+                        elif estimated_margin <= available_capital * 1.5:
+                            st.warning(f"⚠️ **Estimated Margin Required:** ₹{estimated_margin:,.2f} (Lot Size: {lot_size}, Notional: ₹{notional_value:,.2f}) - Low capital warning")
+                        else:
+                            st.error(f"❌ **Estimated Margin Required:** ₹{estimated_margin:,.2f} (Lot Size: {lot_size}, Notional: ₹{notional_value:,.2f}) - Insufficient capital")
+                        
+                        st.info(f"💡 **Available Capital:** ₹{available_capital:,.2f} | **NIFTY 50 Margin Rate:** {margin_rate*100:.1f}%")
+                    except Exception as e:
+                        st.warning(f"Could not calculate margin requirement: {e}")
+                
                 if st.form_submit_button("Add Position"):
                     try:
-                        st.session_state.portfolio_simulator.add_position(
-                            symbol=symbol,
-                            instrument_type="index",
-                            quantity=quantity,
-                            entry_price=entry_price,
-                            strategy=position_type
-                        )
-                        st.success("Position added successfully!")
-                        st.rerun()
+                        # Validate inputs
+                        if quantity <= 0:
+                            st.error("Quantity must be greater than 0")
+                        elif entry_price <= 0:
+                            st.error("Entry price must be greater than 0")
+                        else:
+                            # Add position and check result
+                            success = st.session_state.portfolio_simulator.add_position(
+                                symbol=symbol,
+                                instrument_type="index",
+                                quantity=quantity,
+                                entry_price=entry_price,
+                                strategy=position_type
+                            )
+                            
+                            if success:
+                                st.success(f"✅ Position added successfully! {quantity} lots of {symbol} at ₹{entry_price:,.2f}")
+                                st.rerun()
+                            else:
+                                # Get current capital status for better error message
+                                portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
+                                live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                                real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
+                                available_capital = real_time_metrics.get('available_capital', 0)
+                                
+                                st.error(f"❌ Failed to add position. Available capital: ₹{available_capital:,.2f}")
+                                st.info("💡 Try adding more capital using the 'Add Capital' button above, or reduce the position size.")
                     except Exception as e:
-                        st.error(f"Error adding position: {e}")
+                        st.error(f"❌ Error adding position: {e}")
+                        logger.error(f"Error adding position: {e}")
             
             # Portfolio performance chart
             st.subheader("📈 Portfolio Performance")
@@ -1718,11 +2003,12 @@ class IndianTradingApp:
                 if portfolio_summary:
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric("Total Value", f"₹{portfolio_summary['total_value']:,.0f}")
+                        st.metric("Total Value", f"₹{portfolio_summary.get('total_value', 0):,.0f}")
                     with col2:
-                        st.metric("Total P&L", f"₹{portfolio_summary['total_pnl']:,.0f}", f"{portfolio_summary['total_pnl_percent']:+.2f}%")
+                        st.metric("Total P&L", f"₹{portfolio_summary.get('total_pnl', 0):,.0f}", f"{portfolio_summary.get('total_pnl_percent', 0):+.2f}%")
                     with col3:
-                        st.metric("Open Positions", portfolio_summary['positions']['open'])
+                        positions = portfolio_summary.get('positions', {})
+                        st.metric("Open Positions", positions.get('open', 0))
                 else:
                     st.write("No portfolio data available")
                 
