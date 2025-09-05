@@ -99,8 +99,54 @@ class IndianMarketDataFetcher:
     """Comprehensive data fetcher for Indian market indices"""
     
     def __init__(self, alpha_vantage_api_key: Optional[str] = None, quandl_api_key: Optional[str] = None):
-        self.alpha_vantage_api_key = alpha_vantage_api_key
-        self.quandl_api_key = quandl_api_key
+        # Use provided API keys or fall back to config
+        try:
+            # Try multiple import strategies
+            try:
+                from ..config.config import get_config
+                config = get_config()
+            except ImportError:
+                try:
+                    from config.config import get_config
+                    config = get_config()
+                except ImportError:
+                    try:
+                        from src.config.config import get_config
+                        config = get_config()
+                    except ImportError:
+                        # Direct file import as final fallback
+                        import os
+                        import importlib.util
+                        config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'config.py')
+                        if os.path.exists(config_path):
+                            spec = importlib.util.spec_from_file_location("config", config_path)
+                            config_module = importlib.util.module_from_spec(spec)
+                            spec.loader.exec_module(config_module)
+                            config = config_module.get_config()
+                        else:
+                            # Use default values if config not found
+                            class DefaultConfig:
+                                ALPHA_VANTAGE_API_KEY = "your_alpha_vantage_api_key_here"
+                                QUANDL_API_KEY = "your_quandl_api_key_here"
+                                NEWS_API_KEY = "your_news_api_key_here"
+                                FINNHUB_API_KEY = "your_finnhub_api_key_here"
+                                POLYGON_API_KEY = "your_polygon_api_key_here"
+                            config = DefaultConfig()
+            
+            self.alpha_vantage_api_key = alpha_vantage_api_key or config.ALPHA_VANTAGE_API_KEY
+            self.quandl_api_key = quandl_api_key or config.QUANDL_API_KEY
+            self.news_api_key = config.NEWS_API_KEY
+            self.finnhub_api_key = config.FINNHUB_API_KEY
+            self.polygon_api_key = config.POLYGON_API_KEY
+            
+        except Exception as e:
+            # Fallback to default values if all import strategies fail
+            logger.warning(f"Could not load config: {e}. Using default values.")
+            self.alpha_vantage_api_key = alpha_vantage_api_key or "your_alpha_vantage_api_key_here"
+            self.quandl_api_key = quandl_api_key or "your_quandl_api_key_here"
+            self.news_api_key = "your_news_api_key_here"
+            self.finnhub_api_key = "your_finnhub_api_key_here"
+            self.polygon_api_key = "your_polygon_api_key_here"
         
         self.session = requests.Session()
         self.session.headers.update({
@@ -166,6 +212,109 @@ class IndianMarketDataFetcher:
         except Exception as e:
             logger.error(f"Error fetching Quandl data: {e}")
             return {}
+    
+    def fetch_news_data(self, symbol: str = "NIFTY", limit: int = 10) -> Dict[str, Any]:
+        """Fetch news data using News API"""
+        if not self.news_api_key or self.news_api_key == "your_news_api_key_here":
+            logger.warning("News API key not configured")
+            return self._generate_mock_news_data(symbol, limit)
+        
+        try:
+            url = "https://newsapi.org/v2/everything"
+            params = {
+                'q': f"{symbol} OR NSE OR BSE OR Indian stock market",
+                'apiKey': self.news_api_key,
+                'language': 'en',
+                'sortBy': 'publishedAt',
+                'pageSize': limit
+            }
+            
+            response = self.session.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            if data.get('status') == 'ok':
+                return {
+                    'articles': data.get('articles', []),
+                    'total_results': data.get('totalResults', 0),
+                    'source': 'News API'
+                }
+            else:
+                logger.warning(f"News API error: {data.get('message', 'Unknown error')}")
+                return self._generate_mock_news_data(symbol, limit)
+                
+        except Exception as e:
+            logger.error(f"Error fetching news data: {e}")
+            return self._generate_mock_news_data(symbol, limit)
+    
+    def fetch_finnhub_data(self, symbol: str) -> Dict[str, Any]:
+        """Fetch data from Finnhub API"""
+        if not self.finnhub_api_key or self.finnhub_api_key == "your_finnhub_api_key_here":
+            logger.warning("Finnhub API key not configured")
+            return {}
+        
+        try:
+            # Convert Indian symbols to Finnhub format
+            finnhub_symbol = self._convert_to_finnhub_symbol(symbol)
+            
+            url = "https://finnhub.io/api/v1/quote"
+            params = {
+                'symbol': finnhub_symbol,
+                'token': self.finnhub_api_key
+            }
+            
+            response = self.session.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            if data and 'c' in data:  # 'c' is current price
+                return {
+                    'current_price': data.get('c', 0),
+                    'change': data.get('d', 0),
+                    'change_percent': data.get('dp', 0),
+                    'high': data.get('h', 0),
+                    'low': data.get('l', 0),
+                    'open': data.get('o', 0),
+                    'previous_close': data.get('pc', 0),
+                    'source': 'Finnhub'
+                }
+            else:
+                logger.warning(f"No data received from Finnhub for {symbol}")
+                return {}
+                
+        except Exception as e:
+            logger.error(f"Error fetching Finnhub data: {e}")
+            return {}
+    
+    def _convert_to_finnhub_symbol(self, symbol: str) -> str:
+        """Convert Indian market symbols to Finnhub format"""
+        symbol_mapping = {
+            'NIFTY_50': '^NSEI',
+            'BANK_NIFTY': '^NSEBANK',
+            'SENSEX': '^BSESN',
+            'NIFTY_IT': '^CNXIT',
+            'NIFTY_AUTO': '^CNXAUTO',
+            'NIFTY_PHARMA': '^CNXPHARMA'
+        }
+        return symbol_mapping.get(symbol, symbol)
+    
+    def _generate_mock_news_data(self, symbol: str, limit: int) -> Dict[str, Any]:
+        """Generate mock news data when API is not available"""
+        mock_articles = []
+        for i in range(limit):
+            mock_articles.append({
+                'title': f"{symbol} Market Update - {i+1}",
+                'description': f"Latest market analysis and trends for {symbol} index",
+                'url': f"https://example.com/news/{i+1}",
+                'publishedAt': datetime.now().isoformat(),
+                'source': {'name': 'Mock News Source'}
+            })
+        
+        return {
+            'articles': mock_articles,
+            'total_results': limit,
+            'source': 'Mock Data'
+        }
     
     def fetch_index_data(self, symbol: str, period: str = "1y", interval: str = "1d") -> pd.DataFrame:
         """Fetch OHLCV data for Indian market indices"""
