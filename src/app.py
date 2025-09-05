@@ -27,18 +27,26 @@ from email.mime.base import MIMEBase
 from email import encoders
 import base64
 
-# Add src to path for imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Import helper for robust module loading
+from import_helper import import_config, import_module
 
-# Import our structured modules
-from data.indian_market_data import IndianMarketDataFetcher, INDIAN_MARKET_SYMBOLS
-from analysis.indian_technical_analysis import IndianMarketAnalyzer
-from analysis.indian_backtesting import IndianBacktestingEngine, BacktestConfig
-from analysis.live_prediction_engine import LivePredictionEngine, PredictionResult, MarketEntrySignal
-from options.indian_options_engine import IndianOptionsStrategyEngine, OptionsStrategy, OptionsContract
-from portfolio.indian_portfolio_simulator import IndianPortfolioSimulator, Position, PortfolioMetrics
-from visualization.indian_visualization import IndianMarketVisualizer
-from config.config import get_config, get_indian_market_strategies, get_lot_size
+# Import our structured modules using the helper
+IndianMarketDataFetcher = import_module('data.indian_market_data', 'IndianMarketDataFetcher')
+INDIAN_MARKET_SYMBOLS = import_module('data.indian_market_data', 'INDIAN_MARKET_SYMBOLS')
+IndianMarketAnalyzer = import_module('analysis.indian_technical_analysis', 'IndianMarketAnalyzer')
+IndianBacktestingEngine = import_module('analysis.indian_backtesting', 'IndianBacktestingEngine')
+BacktestConfig = import_module('analysis.indian_backtesting', 'BacktestConfig')
+LivePredictionEngine = import_module('analysis.live_prediction_engine', 'LivePredictionEngine')
+PredictionResult = import_module('analysis.live_prediction_engine', 'PredictionResult')
+MarketEntrySignal = import_module('analysis.live_prediction_engine', 'MarketEntrySignal')
+IndianOptionsStrategyEngine = import_module('options.indian_options_engine', 'IndianOptionsStrategyEngine')
+OptionsStrategy = import_module('options.indian_options_engine', 'OptionsStrategy')
+OptionsContract = import_module('options.indian_options_engine', 'OptionsContract')
+IndianPortfolioSimulator = import_module('portfolio.indian_portfolio_simulator', 'IndianPortfolioSimulator')
+Position = import_module('portfolio.indian_portfolio_simulator', 'Position')
+PortfolioMetrics = import_module('portfolio.indian_portfolio_simulator', 'PortfolioMetrics')
+IndianMarketVisualizer = import_module('visualization.indian_visualization', 'IndianMarketVisualizer')
+get_config = import_config
 
 # Configure logging
 logging.basicConfig(
@@ -97,9 +105,26 @@ class IndianTradingApp:
         # Live refresh functionality
         self._setup_live_refresh()
         
+        # Setup auto-refresh timer
+        self._setup_auto_refresh_timer()
+        
         # Main title
         st.title("🇮🇳 Indian Market Trading Analysis Platform")
         st.markdown("Comprehensive analysis for Nifty 50, Bank Nifty, and Sensex with advanced options strategies and portfolio management.")
+        
+        # Auto-refresh status at the top
+        if st.session_state.get('auto_refresh', False):
+            refresh_interval = st.session_state.get('refresh_interval', 5)
+            refresh_count = st.session_state.get('refresh_counter', 0)
+            last_refresh = st.session_state.get('last_refresh', datetime.now())
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.success(f"🟢 Auto-Refresh: ON (Every {refresh_interval}s)")
+            with col2:
+                st.info(f"🔄 Refresh Count: {refresh_count}")
+            with col3:
+                st.info(f"⏰ Last: {last_refresh.strftime('%H:%M:%S')}")
         
         # Sidebar
         self._create_sidebar()
@@ -131,6 +156,20 @@ class IndianTradingApp:
         
         with tab6:
             self._show_reports()
+        
+        # Enable continuous refresh at the end
+        self._enable_continuous_refresh()
+        
+        # Add JavaScript-based auto-refresh as backup
+        if st.session_state.get('auto_refresh', False):
+            refresh_interval = st.session_state.get('refresh_interval', 5)
+            st.markdown(f"""
+            <script>
+            setTimeout(function() {{
+                window.location.reload();
+            }}, {refresh_interval * 1000});
+            </script>
+            """, unsafe_allow_html=True)
     
     def _setup_live_refresh(self):
         """Setup live refresh functionality"""
@@ -205,7 +244,7 @@ class IndianTradingApp:
                 delta=f"Count: {st.session_state.refresh_counter}"
             )
             
-            # Use JavaScript-based auto-refresh for better performance
+            # Auto-refresh when time is up
             if remaining_time <= 0:
                 # Update refresh time and counter
                 st.session_state.last_refresh = current_time
@@ -213,6 +252,17 @@ class IndianTradingApp:
                 # Clear cache to force data refresh
                 st.session_state.data_cache = {}
                 st.rerun()
+            
+            # Use JavaScript-based auto-refresh for continuous updates
+            if remaining_time > 0:
+                # Add JavaScript to auto-refresh the page
+                st.markdown(f"""
+                <script>
+                setTimeout(function() {{
+                    window.location.reload();
+                }}, {int(remaining_time * 1000)});
+                </script>
+                """, unsafe_allow_html=True)
         
         # Add live status indicator
         st.sidebar.markdown("---")
@@ -224,6 +274,9 @@ class IndianTradingApp:
         last_update = st.session_state.last_refresh.strftime("%H:%M:%S")
         st.sidebar.markdown(f"**Last Update:** {last_update}")
         
+        # Show refresh count
+        st.sidebar.markdown(f"**Refresh Count:** {st.session_state.refresh_counter}")
+        
         # Market status
         try:
             market_status = self.data_fetcher.get_market_status()
@@ -233,24 +286,100 @@ class IndianTradingApp:
         except:
             st.sidebar.markdown("**Market:** ⚪ Unknown")
         
+        # Add refresh status to main page
+        if auto_refresh:
+            # Create a status bar at the top of the main content
+            status_container = st.container()
+            with status_container:
+                col1, col2, col3 = st.columns([2, 1, 1])
+                with col1:
+                    st.success(f"🟢 Live Auto-Refresh Active (Every {refresh_interval}s)")
+                with col2:
+                    st.info(f"Count: {st.session_state.refresh_counter}")
+                with col3:
+                    st.info(f"Last: {last_update}")
+        
         # Add refresh info
         st.sidebar.markdown("---")
         st.sidebar.markdown("**Refresh Info:**")
         st.sidebar.markdown(f"• Auto-refresh: {'ON' if auto_refresh else 'OFF'}")
         st.sidebar.markdown(f"• Interval: {refresh_interval}s")
         st.sidebar.markdown(f"• Total refreshes: {st.session_state.refresh_counter}")
+    
+    def _setup_auto_refresh_timer(self):
+        """Setup automatic refresh timer using Streamlit's built-in capabilities"""
+        try:
+            # Check if auto-refresh is enabled
+            if st.session_state.get('auto_refresh', False):
+                # Create a placeholder for the timer
+                timer_placeholder = st.empty()
+                
+                # Get current time and calculate next refresh
+                current_time = datetime.now()
+                last_refresh = st.session_state.get('last_refresh', current_time)
+                refresh_interval = st.session_state.get('refresh_interval', 5)
+                
+                # Calculate time since last refresh
+                time_since_refresh = (current_time - last_refresh).total_seconds()
+                remaining_time = max(0, refresh_interval - time_since_refresh)
+                
+                # Update timer display
+                if remaining_time > 0:
+                    timer_placeholder.info(f"⏱️ Next refresh in {remaining_time:.0f} seconds")
+                    
+                    # Use time.sleep and st.rerun for automatic refresh
+                    import time
+                    time.sleep(1)  # Wait 1 second
+                    st.rerun()  # This will cause the app to refresh
+                    
+                else:
+                    timer_placeholder.success("🔄 Refreshing data...")
+                    
+                    # Update refresh time and counter
+                    st.session_state.last_refresh = current_time
+                    st.session_state.refresh_counter = st.session_state.get('refresh_counter', 0) + 1
+                    
+                    # Clear cache to force data refresh
+                    st.session_state.data_cache = {}
+                    
+                    # Rerun the app
+                    st.rerun()
+                    
+        except Exception as e:
+            logger.error(f"Error in auto-refresh timer: {e}")
         
-        # Add JavaScript-based auto-refresh for better performance
-        if auto_refresh:
-            # Use JavaScript to trigger refresh at the specified interval
-            refresh_js = f"""
-            <script>
-            setTimeout(function() {{
-                window.location.reload();
-            }}, {refresh_interval * 1000});
-            </script>
-            """
-            components.html(refresh_js, height=0)
+        # Auto-refresh is now handled by the timer method above
+    
+    def _enable_continuous_refresh(self):
+        """Enable continuous refresh using Streamlit's built-in capabilities"""
+        try:
+            if st.session_state.get('auto_refresh', False):
+                # Get refresh settings
+                refresh_interval = st.session_state.get('refresh_interval', 5)
+                last_refresh = st.session_state.get('last_refresh', datetime.now())
+                current_time = datetime.now()
+                
+                # Calculate time since last refresh
+                time_since_refresh = (current_time - last_refresh).total_seconds()
+                
+                if time_since_refresh >= refresh_interval:
+                    # Time to refresh
+                    st.session_state.last_refresh = current_time
+                    st.session_state.refresh_counter = st.session_state.get('refresh_counter', 0) + 1
+                    
+                    # Clear cache to force data refresh
+                    st.session_state.data_cache = {}
+                    
+                    # Rerun the app
+                    st.rerun()
+                else:
+                    # Use time.sleep and st.rerun for continuous refresh
+                    import time
+                    time.sleep(1)  # Wait 1 second
+                    st.rerun()  # This will cause the app to refresh
+                    
+        except Exception as e:
+            logger.error(f"Error in continuous refresh: {e}")
     
     def _should_refresh_data(self, data_key: str) -> bool:
         """Check if data should be refreshed based on cache and timing"""
@@ -320,15 +449,18 @@ class IndianTradingApp:
         show_ema = st.sidebar.checkbox("EMA", value=True)
         show_macd = st.sidebar.checkbox("MACD", value=True)
         show_bollinger = st.sidebar.checkbox("Bollinger Bands", value=True)
+        show_vwap_channel = st.sidebar.checkbox("VWAP Price Channel", value=True)
         show_volume = st.sidebar.checkbox("Volume", value=True)
         show_support_resistance = st.sidebar.checkbox("Support/Resistance", value=True)
         
         # Update analysis params
         st.session_state.analysis_params.update({
             'indicators': ['RSI' if show_rsi else None, 'EMA' if show_ema else None, 
-                          'MACD' if show_macd else None, 'Bollinger_Bands' if show_bollinger else None],
+                          'MACD' if show_macd else None, 'Bollinger_Bands' if show_bollinger else None,
+                          'VWAP_Price_Channel' if show_vwap_channel else None],
             'show_volume': show_volume,
-            'show_support_resistance': show_support_resistance
+            'show_support_resistance': show_support_resistance,
+            'show_vwap_channel': show_vwap_channel
         })
         
         # Options analysis settings
@@ -355,26 +487,111 @@ class IndianTradingApp:
         try:
             market_status = self.data_fetcher.get_market_status()
             
-            if market_status.get('is_market_open', False):
-                st.sidebar.success("🟢 Market Open")
-            else:
-                st.sidebar.info("🔴 Market Closed")
+            # Display current session status
+            session_status = market_status.get('session_status', 'Unknown')
+            current_session = market_status.get('current_session', 'Unknown')
             
-            # Show trading hours
-            trading_hours = market_status.get('trading_hours', {})
-            for session, hours in trading_hours.items():
-                st.sidebar.write(f"**{session.replace('_', ' ').title()}:** {hours}")
+            if market_status.get('is_market_open', False):
+                st.sidebar.success(f"🟢 {session_status}")
+            elif market_status.get('is_pre_market', False):
+                st.sidebar.warning(f"🟡 {session_status}")
+            elif market_status.get('is_post_market', False):
+                st.sidebar.info(f"🔵 {session_status}")
+            else:
+                st.sidebar.info(f"🔴 {session_status}")
+            
+            # Show current time
+            current_time_ist = market_status.get('current_time_ist', 'Unknown')
+            st.sidebar.caption(f"⏰ {current_time_ist}")
+            
+            # Show next event
+            next_event = market_status.get('next_event', '')
+            next_event_time = market_status.get('next_event_time', '')
+            if next_event and next_event_time:
+                st.sidebar.caption(f"⏳ {next_event}: {next_event_time}")
+            
+            # Show trading hours in expander
+            with st.sidebar.expander("📅 Trading Hours"):
+                trading_hours = market_status.get('trading_hours', {})
+                for session, hours in trading_hours.items():
+                    st.write(f"**{session.replace('_', ' ').title()}:** {hours}")
+                
+                # Show market info
+                market_info = market_status.get('market_info', {})
+                if market_info:
+                    st.write("**Exchange:**", market_info.get('exchange', 'NSE'))
+                    st.write("**Timezone:**", market_info.get('timezone', 'IST'))
+                    st.write("**Trading Days:**", market_info.get('trading_days', 'Mon-Fri'))
         
         except Exception as e:
             st.sidebar.error(f"Error fetching market status: {e}")
+        
+        # API Status
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🔑 API Status")
+        self._show_api_status()
+    
+    def _show_api_status(self):
+        """Show API key configuration status"""
+        try:
+            config = get_config()
+        except Exception as e:
+            st.error(f"Configuration error: {e}")
+            return
+        
+        # Check API key status
+        api_status = {
+            'News API': config.NEWS_API_KEY != "your_news_api_key_here",
+            'Alpha Vantage': config.ALPHA_VANTAGE_API_KEY != "your_alpha_vantage_api_key_here",
+            'Quandl': config.QUANDL_API_KEY != "your_quandl_api_key_here",
+            'Finnhub': config.FINNHUB_API_KEY != "your_finnhub_api_key_here",
+            'Polygon': config.POLYGON_API_KEY != "your_polygon_api_key_here",
+            'Twitter': config.TWITTER_API_KEY != "your_twitter_api_key_here"
+        }
+        
+        # Display status
+        for api_name, is_configured in api_status.items():
+            if is_configured:
+                st.sidebar.success(f"✅ {api_name}")
+            else:
+                st.sidebar.warning(f"⚠️ {api_name}")
+        
+        # Show configuration help
+        with st.sidebar.expander("🔧 Configure APIs"):
+            st.markdown("""
+            **To configure API keys:**
+            1. Edit `src/config/config.py`
+            2. Replace placeholder values
+            3. Restart the application
+            
+            **See:** `API_KEYS_SETUP.md` for detailed guide
+            """)
     
     def _show_market_overview(self):
         """Show market overview dashboard"""
         st.header("📊 Indian Market Overview")
         
-        # Live timestamp
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
-        st.markdown(f"**Last Updated:** {current_time}")
+        # Live timestamp and real-time status
+        try:
+            market_status = self.data_fetcher.get_market_status()
+            current_time_ist = market_status.get('current_time_ist', datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"))
+            session_status = market_status.get('session_status', 'Unknown')
+            
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.markdown(f"**Last Updated:** {current_time_ist}")
+            with col2:
+                if market_status.get('is_market_open', False):
+                    st.success(f"🟢 {session_status}")
+                elif market_status.get('is_pre_market', False):
+                    st.warning(f"🟡 {session_status}")
+                elif market_status.get('is_post_market', False):
+                    st.info(f"🔵 {session_status}")
+                else:
+                    st.info(f"🔴 {session_status}")
+        except:
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
+            st.markdown(f"**Last Updated:** {current_time}")
         
         try:
             # Check if we need to refresh data
@@ -402,7 +619,7 @@ class IndianTradingApp:
                 st.error("Unable to fetch market data. Please try again later.")
                 return
             
-            # Display key metrics
+            # Display key metrics with timestamps
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
@@ -413,6 +630,7 @@ class IndianTradingApp:
                         f"₹{nifty_data['current_price']:,.0f}",
                         f"{nifty_data['change_percent']:+.2f}%"
                     )
+                    st.caption(f"Updated: {datetime.now().strftime('%H:%M:%S')}")
             
             with col2:
                 if 'BANK_NIFTY' in overview_data:
@@ -422,6 +640,7 @@ class IndianTradingApp:
                         f"₹{bank_nifty_data['current_price']:,.0f}",
                         f"{bank_nifty_data['change_percent']:+.2f}%"
                     )
+                    st.caption(f"Updated: {datetime.now().strftime('%H:%M:%S')}")
             
             with col3:
                 if 'SENSEX' in overview_data:
@@ -431,6 +650,7 @@ class IndianTradingApp:
                         f"₹{sensex_data['current_price']:,.0f}",
                         f"{sensex_data['change_percent']:+.2f}%"
                     )
+                    st.caption(f"Updated: {datetime.now().strftime('%H:%M:%S')}")
             
             with col4:
                 # Market volatility
@@ -442,8 +662,88 @@ class IndianTradingApp:
                             f"{volatility_data.get('annualized_volatility', 0)*100:.1f}%",
                             f"30d: {volatility_data.get('current_30d_volatility', 0)*100:.1f}%"
                         )
+                        st.caption(f"Updated: {datetime.now().strftime('%H:%M:%S')}")
                 except:
                     st.metric("Market Volatility", "N/A", "N/A")
+                    st.caption(f"Updated: {datetime.now().strftime('%H:%M:%S')}")
+            
+            # Real-time data section
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.subheader("📡 Real-Time Data")
+            with col2:
+                if st.button("🔄 Refresh RT", key="refresh_realtime_btn"):
+                    # Clear real-time data cache
+                    realtime_key = f"realtime_{st.session_state.selected_symbol}"
+                    if realtime_key in st.session_state.data_cache:
+                        del st.session_state.data_cache[realtime_key]
+                    st.rerun()
+            
+            # Fetch and display real-time data
+            try:
+                realtime_key = f"realtime_{st.session_state.selected_symbol}"
+                
+                # Check if we should refresh real-time data
+                if self._should_refresh_data(realtime_key):
+                    with st.spinner("Fetching real-time data..."):
+                        realtime_data = self.data_fetcher.fetch_realtime_data(st.session_state.selected_symbol)
+                        self._cache_data(realtime_key, realtime_data)
+                else:
+                    realtime_data = self._get_cached_data(realtime_key)
+                    if realtime_data is None:
+                        # Fallback if cache is empty
+                        with st.spinner("Fetching real-time data..."):
+                            realtime_data = self.data_fetcher.fetch_realtime_data(st.session_state.selected_symbol)
+                            self._cache_data(realtime_key, realtime_data)
+                
+                if realtime_data:
+                    # Display real-time metrics
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric(
+                            "Current Price",
+                            f"₹{realtime_data.get('current_price', 0):,.2f}",
+                            f"{realtime_data.get('change', 0):+.2f}"
+                        )
+                    
+                    with col2:
+                        st.metric(
+                            "Change %",
+                            f"{realtime_data.get('change_percent', 0):+.2f}%",
+                            f"vs {realtime_data.get('previous_close', 0):,.2f}"
+                        )
+                    
+                    with col3:
+                        st.metric(
+                            "Intraday High",
+                            f"₹{realtime_data.get('intraday_high', 0):,.2f}",
+                            f"Low: ₹{realtime_data.get('intraday_low', 0):,.2f}"
+                        )
+                    
+                    with col4:
+                        st.metric(
+                            "Volume",
+                            f"{realtime_data.get('volume', 0):,}",
+                            f"Session: {realtime_data.get('trading_session', 'Unknown')}"
+                        )
+                    
+                    # Show data source and last updated
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.caption(f"📊 Data Source: {realtime_data.get('data_source', 'Unknown')}")
+                    with col2:
+                        st.caption(f"🕒 Last Updated: {realtime_data.get('last_updated', 'Unknown')}")
+                    
+                    # Show real-time status
+                    if realtime_data.get('is_realtime', False):
+                        st.success("🟢 Live Real-Time Data")
+                    else:
+                        st.info("📊 Historical/Demo Data")
+                        
+            except Exception as e:
+                st.error(f"Error fetching real-time data: {e}")
+                st.info("Real-time data may not be available during market hours or due to API limitations.")
             
             # Market overview chart
             st.subheader("📈 Market Performance")
@@ -512,18 +812,91 @@ class IndianTradingApp:
             with col3:
                 st.metric("EMA 12", f"₹{analysis['ema_12']:,.0f}")
                 st.metric("EMA 26", f"₹{analysis['ema_26']:,.0f}")
-                st.metric("MACD Signal", analysis['macd_signal'])
+                try:
+                    vwap_value = analysis['indicators']['vwap_middle'].iloc[-1]
+                    if pd.isna(vwap_value):
+                        vwap_value = analysis['current_price']
+                    st.metric("VWAP", f"₹{vwap_value:,.0f}")
+                except:
+                    st.metric("VWAP", f"₹{analysis['current_price']:,.0f}")
+            
+            # VPC Indicator Display (like in the reference chart)
+            if 'VWAP_Price_Channel' in st.session_state.analysis_params['indicators']:
+                try:
+                    vwap_upper = analysis['indicators']['vwap_upper'].iloc[-1]
+                    vwap_lower = analysis['indicators']['vwap_lower'].iloc[-1]
+                    vwap_middle = analysis['indicators']['vwap_middle'].iloc[-1]
+                    current_price = analysis['current_price']
+                    
+                    # Check for NaN values
+                    if pd.isna(vwap_upper) or pd.isna(vwap_lower) or pd.isna(vwap_middle):
+                        st.warning("⚠️ VWAP Price Channel data is not available. This might be due to insufficient volume data.")
+                        # Use fallback values
+                        vwap_upper = current_price * 1.02
+                        vwap_lower = current_price * 0.98
+                        vwap_middle = current_price
+                    
+                    st.markdown("---")
+                    st.markdown("### 📊 VPC Indicator")
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("VPC", f"₹{vwap_middle:.2f}", f"₹{current_price:.2f}")
+                    
+                    with col2:
+                        st.metric("Upper", f"₹{vwap_upper:.2f}")
+                    
+                    with col3:
+                        st.metric("Lower", f"₹{vwap_lower:.2f}")
+                    
+                    with col4:
+                        channel_width = ((vwap_upper - vwap_lower) / vwap_middle) * 100
+                        st.metric("Width", f"{channel_width:.1f}%")
+                        
+                except Exception as e:
+                    st.error(f"Error displaying VPC indicator: {e}")
+                    logger.error(f"Error displaying VPC indicator: {e}")
             
             # Technical indicators chart
             st.subheader("📊 Technical Indicators Chart")
+            
+            # Add chart type selector
+            chart_type = st.radio(
+                "Select Chart Type:",
+                ["Simple Test Chart", "Full Technical Analysis", "VWAP Price Channel Focus", "Channel Comparison: Donchian vs VWAP"],
+                horizontal=True
+            )
+            
             try:
-                chart = self.visualizer.create_indian_technical_analysis_chart(
-                    data, analysis, st.session_state.analysis_params
-                )
-                if chart:
+                if chart_type == "Simple Test Chart":
+                    # Show simple test chart
+                    chart = self.visualizer.create_simple_test_chart(data, symbol)
+                elif chart_type == "VWAP Price Channel Focus":
+                    # Show dedicated VWAP Price Channel chart
+                    chart = self.visualizer.create_vwap_price_channel_chart(
+                        data, analysis['indicators'], symbol
+                    )
+                elif chart_type == "Channel Comparison: Donchian vs VWAP":
+                    # Show channel comparison chart
+                    chart = self.visualizer.create_channel_comparison_chart(
+                        data, analysis['indicators'], symbol
+                    )
+                else:
+                    # Show full technical analysis chart
+                    chart = self.visualizer.create_indian_technical_analysis_chart(
+                        data, analysis['indicators'], symbol
+                    )
+                
+                if chart and len(chart.data) > 0:
                     st.plotly_chart(chart, use_container_width=True)
+                else:
+                    st.error("Chart creation failed or returned empty chart")
+                    st.info("Try selecting 'Simple Test Chart' to verify basic functionality")
             except Exception as e:
                 st.error(f"Error creating technical chart: {e}")
+                import traceback
+                st.code(traceback.format_exc())
+                st.info("This might be due to insufficient data or network issues. Try refreshing the page.")
             
             # Detailed analysis
             st.subheader("🔍 Detailed Analysis")
@@ -550,6 +923,74 @@ class IndianTradingApp:
                     st.error("EMA indicates bearish trend")
                 else:
                     st.info("EMA indicates neutral trend")
+            
+            # VWAP Price Channel Analysis
+            if 'VWAP_Price_Channel' in st.session_state.analysis_params['indicators']:
+                vwap_upper = analysis['indicators']['vwap_upper'].iloc[-1]
+                vwap_lower = analysis['indicators']['vwap_lower'].iloc[-1]
+                vwap_middle = analysis['indicators']['vwap_middle'].iloc[-1]
+                current_price = analysis['current_price']
+                
+                # Calculate distance from VWAP bands
+                distance_to_upper = ((current_price - vwap_upper) / vwap_upper) * 100
+                distance_to_lower = ((vwap_lower - current_price) / vwap_lower) * 100
+                distance_to_vwap = ((current_price - vwap_middle) / vwap_middle) * 100
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("VWAP Upper", f"₹{vwap_upper:,.0f}", f"{distance_to_upper:+.2f}%")
+                
+                with col2:
+                    st.metric("VWAP", f"₹{vwap_middle:,.0f}", f"{distance_to_vwap:+.2f}%")
+                
+                with col3:
+                    st.metric("VWAP Lower", f"₹{vwap_lower:,.0f}", f"{distance_to_lower:+.2f}%")
+                
+                # VWAP Channel Analysis
+                if current_price <= vwap_lower:
+                    st.warning("Price at VWAP lower band - potential support level")
+                elif current_price >= vwap_upper:
+                    st.warning("Price at VWAP upper band - potential resistance level")
+                elif current_price > vwap_middle:
+                    st.success("Price above VWAP - bullish bias")
+                elif current_price < vwap_middle:
+                    st.error("Price below VWAP - bearish bias")
+                else:
+                    st.info("Price near VWAP - neutral")
+            
+            # Donchian Channel Analysis
+            if 'donchian_upper' in analysis['indicators'] and 'donchian_lower' in analysis['indicators']:
+                donchian_upper = analysis['indicators']['donchian_upper'].iloc[-1]
+                donchian_lower = analysis['indicators']['donchian_lower'].iloc[-1]
+                donchian_middle = analysis['indicators']['donchian_middle'].iloc[-1]
+                current_price = analysis['current_price']
+                
+                st.markdown("---")
+                st.markdown("### 📈 Traditional Donchian Channel Analysis")
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("Donchian Upper", f"₹{donchian_upper:,.0f}")
+                
+                with col2:
+                    st.metric("Donchian Middle", f"₹{donchian_middle:,.0f}")
+                
+                with col3:
+                    st.metric("Donchian Lower", f"₹{donchian_lower:,.0f}")
+                
+                # Donchian Channel Analysis
+                if current_price >= donchian_upper:
+                    st.success("Price at Donchian upper band - potential breakout")
+                elif current_price <= donchian_lower:
+                    st.warning("Price at Donchian lower band - potential breakdown")
+                elif current_price > donchian_middle:
+                    st.info("Price above Donchian middle - bullish bias")
+                elif current_price < donchian_middle:
+                    st.error("Price below Donchian middle - bearish bias")
+                else:
+                    st.info("Price near Donchian middle - neutral")
             
         except Exception as e:
             st.error(f"Error in technical analysis: {e}")
@@ -924,8 +1365,8 @@ class IndianTradingApp:
             # Display prediction results
             st.subheader("📊 Price Predictions")
             
-            # Key metrics
-            col1, col2, col3, col4 = st.columns(4)
+            # Current price
+            col1, col2, col3, col4, col5 = st.columns(5)
             
             with col1:
                 st.metric(
@@ -935,6 +1376,24 @@ class IndianTradingApp:
                 )
             
             with col2:
+                change_1m = prediction.predicted_price_1m - prediction.current_price
+                st.metric(
+                    "1m Prediction",
+                    f"₹{prediction.predicted_price_1m:,.2f}",
+                    delta=f"{change_1m:+.2f}",
+                    delta_color="normal"
+                )
+            
+            with col3:
+                change_2m = prediction.predicted_price_2m - prediction.current_price
+                st.metric(
+                    "2m Prediction",
+                    f"₹{prediction.predicted_price_2m:,.2f}",
+                    delta=f"{change_2m:+.2f}",
+                    delta_color="normal"
+                )
+            
+            with col4:
                 change_5m = prediction.predicted_price_5m - prediction.current_price
                 st.metric(
                     "5m Prediction",
@@ -943,7 +1402,7 @@ class IndianTradingApp:
                     delta_color="normal"
                 )
             
-            with col3:
+            with col5:
                 change_10m = prediction.predicted_price_10m - prediction.current_price
                 st.metric(
                     "10m Prediction",
@@ -952,11 +1411,35 @@ class IndianTradingApp:
                     delta_color="normal"
                 )
             
-            with col4:
-                confidence_avg = (prediction.confidence_5m + prediction.confidence_10m) / 2
+            # Confidence metrics
+            st.subheader("🎯 Prediction Confidence")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
                 st.metric(
-                    "Avg Confidence",
-                    f"{confidence_avg:.1%}",
+                    "1m Confidence",
+                    f"{prediction.confidence_1m:.1%}",
+                    delta=None
+                )
+            
+            with col2:
+                st.metric(
+                    "2m Confidence",
+                    f"{prediction.confidence_2m:.1%}",
+                    delta=None
+                )
+            
+            with col3:
+                st.metric(
+                    "5m Confidence",
+                    f"{prediction.confidence_5m:.1%}",
+                    delta=None
+                )
+            
+            with col4:
+                st.metric(
+                    "10m Confidence",
+                    f"{prediction.confidence_10m:.1%}",
                     delta=None
                 )
             
@@ -967,8 +1450,12 @@ class IndianTradingApp:
                 # Price prediction chart
                 prediction_data = {
                     'current_price': prediction.current_price,
+                    'predicted_price_1m': prediction.predicted_price_1m,
+                    'predicted_price_2m': prediction.predicted_price_2m,
                     'predicted_price_5m': prediction.predicted_price_5m,
                     'predicted_price_10m': prediction.predicted_price_10m,
+                    'confidence_1m': prediction.confidence_1m,
+                    'confidence_2m': prediction.confidence_2m,
                     'confidence_5m': prediction.confidence_5m,
                     'confidence_10m': prediction.confidence_10m,
                     'timestamp': prediction.timestamp
@@ -1012,22 +1499,20 @@ class IndianTradingApp:
             
             with col2:
                 # Direction analysis
-                st.markdown("""
+                st.markdown(f"""
                 <div style="padding: 20px; border-radius: 10px; background-color: #f0f2f6; border-left: 5px solid #1f77b4;">
                     <h3 style="color: #1f77b4; margin-top: 0;">Direction Analysis</h3>
-                    <p><strong>5m Direction:</strong> {}</p>
-                    <p><strong>10m Direction:</strong> {}</p>
-                    <p><strong>Risk Level:</strong> {}</p>
-                    <p><strong>5m Confidence:</strong> {:.1%}</p>
-                    <p><strong>10m Confidence:</strong> {:.1%}</p>
+                    <p><strong>1m Direction:</strong> {prediction.direction_1m}</p>
+                    <p><strong>2m Direction:</strong> {prediction.direction_2m}</p>
+                    <p><strong>5m Direction:</strong> {prediction.direction_5m}</p>
+                    <p><strong>10m Direction:</strong> {prediction.direction_10m}</p>
+                    <p><strong>Risk Level:</strong> {prediction.risk_level}</p>
+                    <p><strong>1m Confidence:</strong> {prediction.confidence_1m:.1%}</p>
+                    <p><strong>2m Confidence:</strong> {prediction.confidence_2m:.1%}</p>
+                    <p><strong>5m Confidence:</strong> {prediction.confidence_5m:.1%}</p>
+                    <p><strong>10m Confidence:</strong> {prediction.confidence_10m:.1%}</p>
                 </div>
-                """.format(
-                    prediction.direction_5m,
-                    prediction.direction_10m,
-                    prediction.risk_level,
-                    prediction.confidence_5m,
-                    prediction.confidence_10m
-                ), unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
             
             # Trading recommendations
             st.subheader("💡 Trading Recommendations")
@@ -1060,9 +1545,9 @@ class IndianTradingApp:
                 st.warning(f"""
                 **🟡 HOLD RECOMMENDATION**
                 
-                - **Current Price:</strong> ₹{prediction.current_price:,.2f}
-                - **Confidence:</strong> {entry_signal.confidence:.1%}
-                - **Risk Level:</strong> {prediction.risk_level}
+                - **Current Price:** ₹{prediction.current_price:,.2f}
+                - **Confidence:** {entry_signal.confidence:.1%}
+                - **Risk Level:** {prediction.risk_level}
                 
                 **Strategy:** Market conditions are unclear. Wait for better entry opportunity.
                 """)
@@ -1071,12 +1556,16 @@ class IndianTradingApp:
             st.subheader("📈 Model Performance")
             accuracy = self.prediction_engine.get_prediction_accuracy()
             
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4, col5 = st.columns(5)
             with col1:
-                st.metric("5m Accuracy", f"{accuracy['accuracy_5m']:.1%}")
+                st.metric("1m Accuracy", f"{accuracy.get('accuracy_1m', 0):.1%}")
             with col2:
-                st.metric("10m Accuracy", f"{accuracy['accuracy_10m']:.1%}")
+                st.metric("2m Accuracy", f"{accuracy.get('accuracy_2m', 0):.1%}")
             with col3:
+                st.metric("5m Accuracy", f"{accuracy['accuracy_5m']:.1%}")
+            with col4:
+                st.metric("10m Accuracy", f"{accuracy['accuracy_10m']:.1%}")
+            with col5:
                 st.metric("Total Predictions", accuracy['total_predictions'])
             
             # Auto-refresh functionality
