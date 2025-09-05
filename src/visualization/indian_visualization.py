@@ -493,7 +493,27 @@ class IndianMarketVisualizer:
                                              symbol: str) -> go.Figure:
         """Create comprehensive technical analysis chart for Indian markets"""
         try:
+            # Validate input data
+            if data is None or data.empty:
+                logger.error("Data is None or empty")
+                return self._create_error_chart("No data available for chart creation")
+            
+            if indicators is None:
+                logger.error("Indicators is None")
+                return self._create_error_chart("No indicators data available")
+            
+            # Check required columns
+            required_columns = ['Open', 'High', 'Low', 'Close']
+            missing_columns = [col for col in required_columns if col not in data.columns]
+            if missing_columns:
+                logger.error(f"Missing required columns: {missing_columns}")
+                return self._create_error_chart(f"Missing required columns: {missing_columns}")
+            
             symbol_info = self.market_symbols.get(symbol, {'name': symbol, 'color': '#000000'})
+            
+            # Debug logging
+            logger.info(f"Creating chart for {symbol} with {len(data)} data points")
+            logger.info(f"Available indicators: {list(indicators.keys()) if indicators else 'None'}")
             
             # Create subplots
             fig = make_subplots(
@@ -509,7 +529,7 @@ class IndianMarketVisualizer:
                 row_heights=[0.4, 0.2, 0.2, 0.2]
             )
             
-            # Main price chart
+            # Main price chart with proper date/time formatting
             fig.add_trace(
                 go.Candlestick(
                     x=data.index,
@@ -524,14 +544,15 @@ class IndianMarketVisualizer:
                 row=1, col=1
             )
             
-            # Add moving averages
+            # Add moving averages with enhanced hover information
             if 'ema_12' in indicators:
                 fig.add_trace(
                     go.Scatter(
                         x=data.index,
                         y=indicators['ema_12'],
                         name='EMA 12',
-                        line=dict(color='orange', width=2)
+                        line=dict(color='orange', width=2),
+                        hovertemplate='<b>%{x}</b><br>EMA 12: ₹%{y:.2f}<extra></extra>'
                     ),
                     row=1, col=1
                 )
@@ -542,7 +563,21 @@ class IndianMarketVisualizer:
                         x=data.index,
                         y=indicators['ema_26'],
                         name='EMA 26',
-                        line=dict(color='blue', width=2)
+                        line=dict(color='blue', width=2),
+                        hovertemplate='<b>%{x}</b><br>EMA 26: ₹%{y:.2f}<extra></extra>'
+                    ),
+                    row=1, col=1
+                )
+            
+            # Add SMA 50 if available
+            if 'sma_50' in indicators:
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['sma_50'],
+                        name='SMA 50',
+                        line=dict(color='purple', width=2, dash='dash'),
+                        hovertemplate='<b>%{x}</b><br>SMA 50: ₹%{y:.2f}<extra></extra>'
                     ),
                     row=1, col=1
                 )
@@ -570,31 +605,83 @@ class IndianMarketVisualizer:
                     row=1, col=1
                 )
             
-            # RSI
+            # VWAP Price Channel - Enhanced with professional styling
+            if all(key in indicators for key in ['vwap_upper', 'vwap_middle', 'vwap_lower']):
+                # VWAP Upper Band - Red line like in the reference chart
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['vwap_upper'],
+                        name='VWAP Upper',
+                        line=dict(color='#FF4444', width=2.5, shape='spline'),
+                        opacity=0.8,
+                        hovertemplate='<b>VWAP Upper</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                    ),
+                    row=1, col=1
+                )
+                
+                # VWAP Middle Line - Dynamic color based on trend
+                vwap_middle = indicators['vwap_middle']
+                current_price = data['Close'].iloc[-1]
+                vwap_color = '#00C851' if current_price > vwap_middle.iloc[-1] else '#FF4444'
+                
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=vwap_middle,
+                        name='VWAP',
+                        line=dict(color=vwap_color, width=3, shape='spline'),
+                        opacity=0.9,
+                        hovertemplate='<b>VWAP</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                    ),
+                    row=1, col=1
+                )
+                
+                # VWAP Lower Band - Green line with fill
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['vwap_lower'],
+                        name='VWAP Lower',
+                        line=dict(color='#00C851', width=2.5, shape='spline'),
+                        opacity=0.8,
+                        fill='tonexty',
+                        fillcolor='rgba(0, 200, 81, 0.1)',
+                        hovertemplate='<b>VWAP Lower</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                    ),
+                    row=1, col=1
+                )
+            
+            # RSI with enhanced formatting
             if 'rsi' in indicators:
                 fig.add_trace(
                     go.Scatter(
                         x=data.index,
                         y=indicators['rsi'],
                         name='RSI',
-                        line=dict(color=self.color_scheme['info'], width=2)
+                        line=dict(color=self.color_scheme['info'], width=2),
+                        hovertemplate='<b>%{x}</b><br>RSI: %{y:.2f}<extra></extra>'
                     ),
                     row=2, col=1
                 )
                 
-                # Add RSI levels
-                fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
-                fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
-                fig.add_hline(y=50, line_dash="dot", line_color="gray", row=2, col=1)
+                # Add RSI overbought/oversold lines
+                fig.add_hline(y=70, line_dash="dash", line_color="red", 
+                             annotation_text="Overbought (70)", row=2, col=1)
+                fig.add_hline(y=30, line_dash="dash", line_color="green", 
+                             annotation_text="Oversold (30)", row=2, col=1)
+                fig.add_hline(y=50, line_dash="dot", line_color="gray", 
+                             annotation_text="Neutral (50)", row=2, col=1)
             
-            # MACD
+            # MACD with enhanced formatting
             if all(key in indicators for key in ['macd', 'macd_signal', 'macd_hist']):
                 fig.add_trace(
                     go.Scatter(
                         x=data.index,
                         y=indicators['macd'],
                         name='MACD',
-                        line=dict(color='blue', width=2)
+                        line=dict(color='blue', width=2),
+                        hovertemplate='<b>%{x}</b><br>MACD: %{y:.4f}<extra></extra>'
                     ),
                     row=3, col=1
                 )
@@ -604,12 +691,13 @@ class IndianMarketVisualizer:
                         x=data.index,
                         y=indicators['macd_signal'],
                         name='Signal',
-                        line=dict(color='red', width=2)
+                        line=dict(color='red', width=2),
+                        hovertemplate='<b>%{x}</b><br>Signal: %{y:.4f}<extra></extra>'
                     ),
                     row=3, col=1
                 )
                 
-                # MACD Histogram
+                # MACD Histogram with enhanced formatting
                 colors = ['green' if val >= 0 else 'red' for val in indicators['macd_hist']]
                 fig.add_trace(
                     go.Bar(
@@ -617,38 +705,110 @@ class IndianMarketVisualizer:
                         y=indicators['macd_hist'],
                         name='Histogram',
                         marker_color=colors,
-                        opacity=0.6
+                        opacity=0.6,
+                        hovertemplate='<b>%{x}</b><br>Histogram: %{y:.4f}<extra></extra>'
                     ),
                     row=3, col=1
                 )
+                
+                # Add zero line for MACD
+                fig.add_hline(y=0, line_dash="dot", line_color="gray", row=3, col=1)
             
-            # Volume
+            # Volume with enhanced formatting
             fig.add_trace(
                 go.Bar(
                     x=data.index,
                     y=data['Volume'],
                     name='Volume',
                     marker_color='lightblue',
-                    opacity=0.6
+                    opacity=0.6,
+                    hovertemplate='<b>%{x}</b><br>Volume: %{y:,.0f}<extra></extra>'
                 ),
                 row=4, col=1
             )
             
-            # Update layout
+            # Get current timestamp and data range
+            current_time = datetime.now()
+            data_start = data.index[0] if not data.empty else current_time
+            data_end = data.index[-1] if not data.empty else current_time
+            
+            # Update layout with comprehensive date/time formatting and timestamps
             fig.update_layout(
-                title=f'{symbol_info["name"]} Technical Analysis',
-                height=1000,
+                title=f'{symbol_info["name"]} Technical Analysis<br><sub>Last Updated: {current_time.strftime("%Y-%m-%d %H:%M:%S IST")} | Data Range: {data_start.strftime("%Y-%m-%d")} to {data_end.strftime("%Y-%m-%d")}</sub>',
+                height=1200,
                 showlegend=True,
                 plot_bgcolor=self.color_scheme['background'],
-                paper_bgcolor='white'
+                paper_bgcolor='white',
+                hovermode='x unified',
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                ),
+                annotations=[
+                    dict(
+                        text=f"Data Points: {len(data)} | Generated: {current_time.strftime('%H:%M:%S')}",
+                        xref="paper", yref="paper",
+                        x=0.02, y=0.98, xanchor='left', yanchor='top',
+                        showarrow=False,
+                        font=dict(size=10, color="gray"),
+                        bgcolor="rgba(255,255,255,0.8)",
+                        bordercolor="gray",
+                        borderwidth=1
+                    )
+                ]
             )
             
-            # Update axes
-            fig.update_xaxes(title_text="Date", row=4, col=1)
-            fig.update_yaxes(title_text="Price", row=1, col=1)
-            fig.update_yaxes(title_text="RSI", row=2, col=1)
-            fig.update_yaxes(title_text="MACD", row=3, col=1)
-            fig.update_yaxes(title_text="Volume", row=4, col=1)
+            # Update axes with proper date/time formatting
+            fig.update_xaxes(
+                title_text="Date & Time",
+                row=4, col=1,
+                tickformat="%Y-%m-%d<br>%H:%M",
+                tickangle=45,
+                showgrid=True,
+                gridcolor=self.color_scheme['grid']
+            )
+            
+            # Update all x-axes to show proper date/time
+            for i in range(1, 5):
+                fig.update_xaxes(
+                    tickformat="%Y-%m-%d<br>%H:%M",
+                    tickangle=45,
+                    showgrid=True,
+                    gridcolor=self.color_scheme['grid'],
+                    row=i, col=1
+                )
+            
+            # Update y-axes with proper formatting
+            fig.update_yaxes(
+                title_text="Price (₹)",
+                row=1, col=1,
+                tickformat="₹.2f",
+                showgrid=True,
+                gridcolor=self.color_scheme['grid']
+            )
+            fig.update_yaxes(
+                title_text="RSI",
+                row=2, col=1,
+                range=[0, 100],
+                showgrid=True,
+                gridcolor=self.color_scheme['grid']
+            )
+            fig.update_yaxes(
+                title_text="MACD",
+                row=3, col=1,
+                showgrid=True,
+                gridcolor=self.color_scheme['grid']
+            )
+            fig.update_yaxes(
+                title_text="Volume",
+                row=4, col=1,
+                tickformat=".2s",
+                showgrid=True,
+                gridcolor=self.color_scheme['grid']
+            )
             
             return fig
             
@@ -936,6 +1096,461 @@ class IndianMarketVisualizer:
         except Exception as e:
             logger.error(f"Error creating entry signal chart: {e}")
             return self._create_error_chart("Error creating signal chart")
+    
+    def create_vwap_price_channel_chart(self, data: pd.DataFrame, indicators: Dict[str, Any], 
+                                       symbol: str) -> go.Figure:
+        """Create a dedicated VWAP Price Channel chart similar to professional trading platforms"""
+        try:
+            symbol_info = self.market_symbols.get(symbol, {'name': symbol, 'color': '#000000'})
+            
+            # Create subplots for main chart and volume
+            fig = make_subplots(
+                rows=2, cols=1,
+                shared_xaxes=True,
+                vertical_spacing=0.05,
+                subplot_titles=(
+                    f'{symbol_info["name"]} - VWAP Price Channel',
+                    'Volume'
+                ),
+                row_heights=[0.8, 0.2]
+            )
+            
+            # Candlestick chart
+            fig.add_trace(
+                go.Candlestick(
+                    x=data.index,
+                    open=data['Open'],
+                    high=data['High'],
+                    low=data['Low'],
+                    close=data['Close'],
+                    name='Price',
+                    increasing_line_color=self.color_scheme['bullish'],
+                    decreasing_line_color=self.color_scheme['bearish']
+                ),
+                row=1, col=1
+            )
+            
+            # VWAP Price Channel with enhanced styling
+            if all(key in indicators for key in ['vwap_upper', 'vwap_middle', 'vwap_lower']):
+                # Check for valid data
+                vwap_upper = indicators['vwap_upper'].dropna()
+                vwap_middle = indicators['vwap_middle'].dropna()
+                vwap_lower = indicators['vwap_lower'].dropna()
+                
+                if len(vwap_upper) > 0 and len(vwap_middle) > 0 and len(vwap_lower) > 0:
+                    # VWAP Upper Band - Red line
+                    fig.add_trace(
+                        go.Scatter(
+                            x=vwap_upper.index,
+                            y=vwap_upper,
+                            name='VWAP Upper',
+                            line=dict(color='#FF4444', width=2.5, shape='spline'),
+                            opacity=0.8,
+                            hovertemplate='<b>VWAP Upper</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                        ),
+                        row=1, col=1
+                    )
+                
+                    # VWAP Middle Line - Dynamic color
+                    current_price = data['Close'].iloc[-1]
+                    vwap_color = '#00C851' if current_price > vwap_middle.iloc[-1] else '#FF4444'
+                    
+                    fig.add_trace(
+                        go.Scatter(
+                            x=vwap_middle.index,
+                            y=vwap_middle,
+                            name='VWAP',
+                            line=dict(color=vwap_color, width=3, shape='spline'),
+                            opacity=0.9,
+                            hovertemplate='<b>VWAP</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                        ),
+                        row=1, col=1
+                    )
+                    
+                    # VWAP Lower Band - Green line with fill
+                    fig.add_trace(
+                        go.Scatter(
+                            x=vwap_lower.index,
+                            y=vwap_lower,
+                            name='VWAP Lower',
+                            line=dict(color='#00C851', width=2.5, shape='spline'),
+                            opacity=0.8,
+                            fill='tonexty',
+                            fillcolor='rgba(0, 200, 81, 0.1)',
+                            hovertemplate='<b>VWAP Lower</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                        ),
+                        row=1, col=1
+                    )
+            
+            # Volume bars
+            fig.add_trace(
+                go.Bar(
+                    x=data.index,
+                    y=data['Volume'],
+                    name='Volume',
+                    marker_color='lightgray',
+                    opacity=0.6
+                ),
+                row=2, col=1
+            )
+            
+            # Update layout with professional styling
+            # Get current timestamp and data range
+            current_time = datetime.now()
+            data_start = data.index[0] if not data.empty else current_time
+            data_end = data.index[-1] if not data.empty else current_time
+            
+            fig.update_layout(
+                title={
+                    'text': f'{symbol_info["name"]} - VWAP Price Channel Analysis<br><sub>Last Updated: {current_time.strftime("%Y-%m-%d %H:%M:%S IST")} | Data Range: {data_start.strftime("%Y-%m-%d")} to {data_end.strftime("%Y-%m-%d")}</sub>',
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'font': {'size': 18, 'color': self.color_scheme['text']}
+                },
+                height=800,
+                showlegend=True,
+                plot_bgcolor='#1e1e1e',  # Dark background like professional charts
+                paper_bgcolor='#1e1e1e',
+                font=dict(family="Arial", size=12, color='white'),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                ),
+                annotations=[
+                    dict(
+                        text=f"Data Points: {len(data)} | Generated: {current_time.strftime('%H:%M:%S')}",
+                        xref="paper", yref="paper",
+                        x=0.02, y=0.98, xanchor='left', yanchor='top',
+                        showarrow=False,
+                        font=dict(size=10, color="lightgray"),
+                        bgcolor="rgba(30,30,30,0.8)",
+                        bordercolor="gray",
+                        borderwidth=1
+                    )
+                ]
+            )
+            
+            # Update axes with dark theme
+            fig.update_xaxes(
+                title_text="Date",
+                gridcolor='#333333',
+                showgrid=True,
+                row=2, col=1
+            )
+            fig.update_yaxes(
+                title_text="Price (₹)",
+                gridcolor='#333333',
+                showgrid=True,
+                row=1, col=1
+            )
+            fig.update_yaxes(
+                title_text="Volume",
+                gridcolor='#333333',
+                showgrid=True,
+                row=2, col=1
+            )
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating VWAP Price Channel chart: {e}")
+            return self._create_error_chart("Error creating VWAP Price Channel chart")
+    
+    def create_channel_comparison_chart(self, data: pd.DataFrame, indicators: Dict[str, Any], 
+                                      symbol: str) -> go.Figure:
+        """Create a comparison chart showing Traditional Donchian Channel vs VWAP Price Channel"""
+        try:
+            symbol_info = self.market_symbols.get(symbol, {'name': symbol, 'color': '#000000'})
+            
+            # Create subplots for main chart and volume
+            fig = make_subplots(
+                rows=2, cols=1,
+                shared_xaxes=True,
+                vertical_spacing=0.05,
+                subplot_titles=(
+                    f'{symbol_info["name"]} - Channel Comparison: Donchian vs VWAP Price Channel',
+                    'Volume'
+                ),
+                row_heights=[0.8, 0.2]
+            )
+            
+            # Candlestick chart
+            fig.add_trace(
+                go.Candlestick(
+                    x=data.index,
+                    open=data['Open'],
+                    high=data['High'],
+                    low=data['Low'],
+                    close=data['Close'],
+                    name='Price',
+                    increasing_line_color=self.color_scheme['bullish'],
+                    decreasing_line_color=self.color_scheme['bearish']
+                ),
+                row=1, col=1
+            )
+            
+            # Traditional Donchian Channel - Blue stepped lines
+            if all(key in indicators for key in ['donchian_upper', 'donchian_middle', 'donchian_lower']):
+                # Donchian Upper Band - Blue stepped line
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['donchian_upper'],
+                        name='Traditional Donchian Channel',
+                        line=dict(color='#1f77b4', width=2, shape='hv'),  # hv = horizontal-vertical (stepped)
+                        opacity=0.8,
+                        hovertemplate='<b>Donchian Upper</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                    ),
+                    row=1, col=1
+                )
+                
+                # Donchian Middle Line - Red line
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['donchian_middle'],
+                        name='Donchian Middle',
+                        line=dict(color='#FF4444', width=2, shape='hv'),
+                        opacity=0.8,
+                        hovertemplate='<b>Donchian Middle</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                    ),
+                    row=1, col=1
+                )
+                
+                # Donchian Lower Band - Blue stepped line with fill
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=indicators['donchian_lower'],
+                        name='Donchian Lower',
+                        line=dict(color='#1f77b4', width=2, shape='hv'),
+                        opacity=0.8,
+                        fill='tonexty',
+                        fillcolor='rgba(31, 119, 180, 0.1)',
+                        hovertemplate='<b>Donchian Lower</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                    ),
+                    row=1, col=1
+                )
+            
+            # VWAP Price Channel - Smooth curves
+            if all(key in indicators for key in ['vwap_upper', 'vwap_middle', 'vwap_lower']):
+                # Check for valid VWAP data
+                vwap_upper = indicators['vwap_upper'].dropna()
+                vwap_middle = indicators['vwap_middle'].dropna()
+                vwap_lower = indicators['vwap_lower'].dropna()
+                
+                if len(vwap_upper) > 0 and len(vwap_middle) > 0 and len(vwap_lower) > 0:
+                    # VWAP Upper Band - Red smooth line
+                    fig.add_trace(
+                        go.Scatter(
+                            x=vwap_upper.index,
+                            y=vwap_upper,
+                            name='Corners Cut with Anchored VWAPs',
+                            line=dict(color='#FF4444', width=2.5, shape='spline'),
+                            opacity=0.8,
+                            hovertemplate='<b>VWAP Upper</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                        ),
+                        row=1, col=1
+                    )
+                
+                    # VWAP Middle Line - Dynamic color
+                    current_price = data['Close'].iloc[-1]
+                    vwap_color = '#00C851' if current_price > vwap_middle.iloc[-1] else '#FF4444'
+                    
+                    fig.add_trace(
+                        go.Scatter(
+                            x=vwap_middle.index,
+                            y=vwap_middle,
+                            name='VWAP Middle',
+                            line=dict(color=vwap_color, width=3, shape='spline'),
+                            opacity=0.9,
+                            hovertemplate='<b>VWAP Middle</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                        ),
+                        row=1, col=1
+                    )
+                    
+                    # VWAP Lower Band - Green smooth line with fill
+                    fig.add_trace(
+                        go.Scatter(
+                            x=vwap_lower.index,
+                            y=vwap_lower,
+                            name='VWAP Lower',
+                            line=dict(color='#00C851', width=2.5, shape='spline'),
+                            opacity=0.8,
+                            fill='tonexty',
+                            fillcolor='rgba(0, 200, 81, 0.15)',
+                            hovertemplate='<b>VWAP Lower</b><br>Price: ₹%{y:,.2f}<extra></extra>'
+                        ),
+                        row=1, col=1
+                    )
+            
+            # Volume bars
+            fig.add_trace(
+                go.Bar(
+                    x=data.index,
+                    y=data['Volume'],
+                    name='Volume',
+                    marker_color='lightgray',
+                    opacity=0.6
+                ),
+                row=2, col=1
+            )
+            
+            # Add annotations for channel labels
+            if len(data) > 0:
+                # Traditional Donchian Channel label
+                fig.add_annotation(
+                    x=data.index[len(data)//3],
+                    y=indicators['donchian_upper'].iloc[len(data)//3] if 'donchian_upper' in indicators else data['High'].iloc[len(data)//3],
+                    text="Traditional Donchian Channel",
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowcolor='#1f77b4',
+                    font=dict(color='#1f77b4', size=12),
+                    row=1, col=1
+                )
+                
+                # VWAP Price Channel label
+                fig.add_annotation(
+                    x=data.index[2*len(data)//3],
+                    y=indicators['vwap_lower'].iloc[2*len(data)//3] if 'vwap_lower' in indicators else data['Low'].iloc[2*len(data)//3],
+                    text="Corners Cut with Anchored VWAPs",
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowcolor='#00C851',
+                    font=dict(color='#00C851', size=12),
+                    row=1, col=1
+                )
+            
+            # Get current timestamp and data range
+            current_time = datetime.now()
+            data_start = data.index[0] if not data.empty else current_time
+            data_end = data.index[-1] if not data.empty else current_time
+            
+            # Update layout with professional styling and timestamps
+            fig.update_layout(
+                title={
+                    'text': f'{symbol_info["name"]} - Channel Comparison Analysis<br><sub>Last Updated: {current_time.strftime("%Y-%m-%d %H:%M:%S IST")} | Data Range: {data_start.strftime("%Y-%m-%d")} to {data_end.strftime("%Y-%m-%d")}</sub>',
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'font': {'size': 18, 'color': self.color_scheme['text']}
+                },
+                height=800,
+                showlegend=True,
+                plot_bgcolor='#1e1e1e',  # Dark background
+                paper_bgcolor='#1e1e1e',
+                font=dict(family="Arial", size=12, color='white'),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                ),
+                annotations=[
+                    dict(
+                        text=f"Data Points: {len(data)} | Generated: {current_time.strftime('%H:%M:%S')}",
+                        xref="paper", yref="paper",
+                        x=0.02, y=0.98, xanchor='left', yanchor='top',
+                        showarrow=False,
+                        font=dict(size=10, color="lightgray"),
+                        bgcolor="rgba(30,30,30,0.8)",
+                        bordercolor="gray",
+                        borderwidth=1
+                    )
+                ]
+            )
+            
+            # Update axes with dark theme
+            fig.update_xaxes(
+                title_text="Date",
+                gridcolor='#333333',
+                showgrid=True,
+                row=2, col=1
+            )
+            fig.update_yaxes(
+                title_text="Price (₹)",
+                gridcolor='#333333',
+                showgrid=True,
+                row=1, col=1
+            )
+            fig.update_yaxes(
+                title_text="Volume",
+                gridcolor='#333333',
+                showgrid=True,
+                row=2, col=1
+            )
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating channel comparison chart: {e}")
+            return self._create_error_chart("Error creating channel comparison chart")
+    
+    def create_simple_test_chart(self, data: pd.DataFrame, symbol: str) -> go.Figure:
+        """Create a simple test chart to verify basic functionality"""
+        try:
+            fig = go.Figure()
+            
+            # Add simple line chart
+            fig.add_trace(
+                go.Scatter(
+                    x=data.index,
+                    y=data['Close'],
+                    mode='lines',
+                    name='Close Price',
+                    line=dict(color='blue', width=2)
+                )
+            )
+            
+            # Get current timestamp and data range
+            current_time = datetime.now()
+            data_start = data.index[0] if not data.empty else current_time
+            data_end = data.index[-1] if not data.empty else current_time
+            
+            fig.update_layout(
+                title=f'{symbol} - Simple Test Chart<br><sub>Last Updated: {current_time.strftime("%Y-%m-%d %H:%M:%S IST")} | Data Range: {data_start.strftime("%Y-%m-%d")} to {data_end.strftime("%Y-%m-%d")}</sub>',
+                xaxis_title='Date & Time',
+                yaxis_title='Price (₹)',
+                height=400,
+                annotations=[
+                    dict(
+                        text=f"Data Points: {len(data)} | Generated: {current_time.strftime('%H:%M:%S')}",
+                        xref="paper", yref="paper",
+                        x=0.02, y=0.98, xanchor='left', yanchor='top',
+                        showarrow=False,
+                        font=dict(size=10, color="gray"),
+                        bgcolor="rgba(255,255,255,0.8)",
+                        bordercolor="gray",
+                        borderwidth=1
+                    )
+                ]
+            )
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating simple test chart: {e}")
+            return self._create_error_chart(f"Error creating test chart: {e}")
+    
+    def _create_error_chart(self, error_message: str) -> go.Figure:
+        """Create a simple error chart when visualization fails"""
+        fig = go.Figure()
+        fig.add_annotation(
+            text=error_message,
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False, font_size=16
+        )
+        fig.update_layout(
+            title="Visualization Error",
+            height=400,
+            showlegend=False
+        )
+        return fig
 
 # Example usage and testing
 if __name__ == "__main__":
