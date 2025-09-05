@@ -43,6 +43,18 @@ class PredictionResult:
     direction_2m: str
     direction_5m: str
     direction_10m: str
+    trend_1m: str  # 'BULLISH', 'BEARISH', 'NEUTRAL'
+    trend_2m: str
+    trend_5m: str
+    trend_10m: str
+    trend_strength_1m: str  # 'STRONG', 'MODERATE', 'WEAK'
+    trend_strength_2m: str
+    trend_strength_5m: str
+    trend_strength_10m: str
+    price_change_1m: float  # Percentage change
+    price_change_2m: float
+    price_change_5m: float
+    price_change_10m: float
     entry_signal: str  # 'BUY', 'SELL', 'HOLD'
     risk_level: str  # 'LOW', 'MEDIUM', 'HIGH'
     timestamp: datetime
@@ -245,11 +257,29 @@ class LivePredictionEngine:
                 predicted_price_5m, confidence_5m = self._statistical_prediction(data, 5)
                 predicted_price_10m, confidence_10m = self._statistical_prediction(data, 10)
             
+            # Calculate price changes for all timeframes
+            price_change_1m = self._calculate_price_change(current_price, predicted_price_1m)
+            price_change_2m = self._calculate_price_change(current_price, predicted_price_2m)
+            price_change_5m = self._calculate_price_change(current_price, predicted_price_5m)
+            price_change_10m = self._calculate_price_change(current_price, predicted_price_10m)
+            
             # Determine direction for all timeframes
             direction_1m = self._get_direction(current_price, predicted_price_1m)
             direction_2m = self._get_direction(current_price, predicted_price_2m)
             direction_5m = self._get_direction(current_price, predicted_price_5m)
             direction_10m = self._get_direction(current_price, predicted_price_10m)
+            
+            # Determine trend for all timeframes
+            trend_1m = self._get_trend(current_price, predicted_price_1m)
+            trend_2m = self._get_trend(current_price, predicted_price_2m)
+            trend_5m = self._get_trend(current_price, predicted_price_5m)
+            trend_10m = self._get_trend(current_price, predicted_price_10m)
+            
+            # Determine trend strength for all timeframes
+            trend_strength_1m = self._get_trend_strength(price_change_1m, confidence_1m)
+            trend_strength_2m = self._get_trend_strength(price_change_2m, confidence_2m)
+            trend_strength_5m = self._get_trend_strength(price_change_5m, confidence_5m)
+            trend_strength_10m = self._get_trend_strength(price_change_10m, confidence_10m)
             
             # Generate entry signal based on all timeframes
             entry_signal = self._generate_entry_signal(
@@ -275,6 +305,18 @@ class LivePredictionEngine:
                 direction_2m=direction_2m,
                 direction_5m=direction_5m,
                 direction_10m=direction_10m,
+                trend_1m=trend_1m,
+                trend_2m=trend_2m,
+                trend_5m=trend_5m,
+                trend_10m=trend_10m,
+                trend_strength_1m=trend_strength_1m,
+                trend_strength_2m=trend_strength_2m,
+                trend_strength_5m=trend_strength_5m,
+                trend_strength_10m=trend_strength_10m,
+                price_change_1m=price_change_1m,
+                price_change_2m=price_change_2m,
+                price_change_5m=price_change_5m,
+                price_change_10m=price_change_10m,
                 entry_signal=entry_signal,
                 risk_level=risk_level,
                 timestamp=current_time,
@@ -328,6 +370,33 @@ class LivePredictionEngine:
             return 'DOWN'
         else:
             return 'SIDEWAYS'
+    
+    def _get_trend(self, current_price: float, predicted_price: float) -> str:
+        """Determine market trend"""
+        change_percent = (predicted_price - current_price) / current_price * 100
+        
+        if change_percent > 0.05:  # 0.05% threshold for trend
+            return 'BULLISH'
+        elif change_percent < -0.05:
+            return 'BEARISH'
+        else:
+            return 'NEUTRAL'
+    
+    def _get_trend_strength(self, change_percent: float, confidence: float) -> str:
+        """Determine trend strength based on price change and confidence"""
+        # Combine price change magnitude with confidence
+        strength_score = abs(change_percent) * confidence * 100
+        
+        if strength_score > 0.5:
+            return 'STRONG'
+        elif strength_score > 0.2:
+            return 'MODERATE'
+        else:
+            return 'WEAK'
+    
+    def _calculate_price_change(self, current_price: float, predicted_price: float) -> float:
+        """Calculate percentage price change"""
+        return (predicted_price - current_price) / current_price * 100
     
     def _generate_entry_signal(self, current_price: float, pred_1m: float, pred_2m: float,
                              pred_5m: float, pred_10m: float, conf_1m: float, conf_2m: float,
@@ -387,6 +456,18 @@ class LivePredictionEngine:
             direction_2m='SIDEWAYS',
             direction_5m='SIDEWAYS',
             direction_10m='SIDEWAYS',
+            trend_1m='NEUTRAL',
+            trend_2m='NEUTRAL',
+            trend_5m='NEUTRAL',
+            trend_10m='NEUTRAL',
+            trend_strength_1m='WEAK',
+            trend_strength_2m='WEAK',
+            trend_strength_5m='WEAK',
+            trend_strength_10m='WEAK',
+            price_change_1m=0.0,
+            price_change_2m=0.0,
+            price_change_5m=0.0,
+            price_change_10m=0.0,
             entry_signal='HOLD',
             risk_level='HIGH',
             timestamp=datetime.now(),
