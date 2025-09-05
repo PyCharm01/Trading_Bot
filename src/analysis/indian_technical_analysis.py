@@ -84,10 +84,100 @@ class IndianTechnicalIndicators:
         return atr.fillna(0)
     
     def calculate_vwap(self, high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series) -> pd.Series:
-        """Calculate Volume Weighted Average Price"""
-        typical_price = (high + low + close) / 3
-        vwap = (typical_price * volume).cumsum() / volume.cumsum()
-        return vwap
+        """Calculate Volume Weighted Average Price with robust error handling"""
+        try:
+            # Handle missing or zero volume data
+            volume = volume.fillna(0)
+            volume = volume.replace(0, 1)  # Replace zeros with 1 to avoid division by zero
+            
+            # Calculate typical price
+            typical_price = (high + low + close) / 3
+            
+            # Calculate VWAP with cumulative sums
+            cumulative_volume = volume.cumsum()
+            cumulative_typical_price_volume = (typical_price * volume).cumsum()
+            
+            # Calculate VWAP, handling division by zero
+            vwap = cumulative_typical_price_volume / cumulative_volume
+            
+            # Fill any remaining NaN values with the close price
+            vwap = vwap.fillna(close)
+            
+            return vwap
+            
+        except Exception as e:
+            logger.error(f"Error calculating VWAP: {e}")
+            # Fallback to simple moving average of close price
+            return close.rolling(window=20).mean().fillna(close)
+    
+    def calculate_vwap_price_channel(self, high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series, 
+                                   period: int = 20, std_dev: float = 2.0) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Calculate VWAP Price Channel with upper and lower bands - Enhanced version with robust error handling"""
+        try:
+            # Calculate VWAP
+            vwap = self.calculate_vwap(high, low, close, volume)
+            
+            # Calculate typical price
+            typical_price = (high + low + close) / 3
+            
+            # Calculate standard deviation of price from VWAP with smoothing
+            price_deviation = (typical_price - vwap).rolling(window=period).std()
+            
+            # Fill NaN values in price deviation
+            price_deviation = price_deviation.fillna(price_deviation.mean())
+            if price_deviation.isna().all():
+                # Fallback: use ATR-based deviation
+                atr = self.calculate_atr(high, low, close, period)
+                price_deviation = atr.fillna(atr.mean())
+            
+            # Apply exponential smoothing to create smoother curves
+            price_deviation_smooth = price_deviation.ewm(span=period//2).mean()
+            price_deviation_smooth = price_deviation_smooth.fillna(price_deviation)
+            
+            # Calculate upper and lower bands with adaptive multiplier
+            # Use higher multiplier for more volatile periods
+            volatility_factor = price_deviation_smooth / price_deviation_smooth.rolling(window=period).mean()
+            volatility_factor = volatility_factor.fillna(1.0)  # Default to 1.0 if NaN
+            adaptive_multiplier = std_dev * (0.8 + 0.4 * volatility_factor.clip(0.5, 2.0))
+            
+            vwap_upper = vwap + (price_deviation_smooth * adaptive_multiplier)
+            vwap_lower = vwap - (price_deviation_smooth * adaptive_multiplier)
+            
+            # Apply additional smoothing to create "corner cutting" effect
+            vwap_upper_smooth = vwap_upper.ewm(span=period//3).mean()
+            vwap_lower_smooth = vwap_lower.ewm(span=period//3).mean()
+            vwap_smooth = vwap.ewm(span=period//4).mean()
+            
+            # Fill any remaining NaN values
+            vwap_upper_smooth = vwap_upper_smooth.fillna(vwap_upper).fillna(close * 1.02)
+            vwap_lower_smooth = vwap_lower_smooth.fillna(vwap_lower).fillna(close * 0.98)
+            vwap_smooth = vwap_smooth.fillna(vwap).fillna(close)
+            
+            return vwap_upper_smooth, vwap_smooth, vwap_lower_smooth
+            
+        except Exception as e:
+            logger.error(f"Error calculating VWAP Price Channel: {e}")
+            # Fallback to simple Bollinger Bands
+            sma = close.rolling(window=period).mean()
+            std = close.rolling(window=period).std()
+            upper = sma + (std * std_dev)
+            lower = sma - (std * std_dev)
+            
+            # Fill NaN values
+            upper = upper.fillna(close * 1.02)
+            lower = lower.fillna(close * 0.98)
+            sma = sma.fillna(close)
+            
+            return upper, sma, lower
+    
+    def calculate_donchian_channel(self, high: pd.Series, low: pd.Series, period: int = 20) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Calculate Traditional Donchian Channel with upper, middle, and lower bands"""
+        # Donchian Channel: Upper = highest high, Lower = lowest low, Middle = average
+        donchian_upper = high.rolling(window=period).max()
+        donchian_lower = low.rolling(window=period).min()
+        donchian_middle = (donchian_upper + donchian_lower) / 2
+        
+        return donchian_upper, donchian_middle, donchian_lower
     
     def calculate_williams_r(self, high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> pd.Series:
         """Calculate Williams %R"""
@@ -265,6 +355,16 @@ class IndianMarketAnalyzer:
         indicators['vwap'] = self.indicators.calculate_vwap(data['High'], data['Low'], data['Close'], data['Volume'])
         indicators['obv'] = self.indicators.calculate_obv(data['Close'], data['Volume'])
         
+        # VWAP Price Channel
+        indicators['vwap_upper'], indicators['vwap_middle'], indicators['vwap_lower'] = self.indicators.calculate_vwap_price_channel(
+            data['High'], data['Low'], data['Close'], data['Volume']
+        )
+        
+        # Traditional Donchian Channel
+        indicators['donchian_upper'], indicators['donchian_middle'], indicators['donchian_lower'] = self.indicators.calculate_donchian_channel(
+            data['High'], data['Low']
+        )
+        
         return indicators
     
     def _generate_trading_signals(self, data: pd.DataFrame, indicators: Dict[str, Any], index_name: str) -> Dict[str, Any]:
@@ -325,6 +425,22 @@ class IndianMarketAnalyzer:
             signals['stoch'] = {'signal': 'SELL', 'strength': 0.6, 'reasoning': 'Stochastic overbought'}
         else:
             signals['stoch'] = {'signal': 'NEUTRAL', 'strength': 0.3, 'reasoning': 'Stochastic neutral'}
+        
+        # VWAP Price Channel signals
+        vwap_upper = indicators['vwap_upper'].iloc[-1]
+        vwap_lower = indicators['vwap_lower'].iloc[-1]
+        vwap_middle = indicators['vwap_middle'].iloc[-1]
+        
+        if current_price <= vwap_lower:
+            signals['vwap_channel'] = {'signal': 'BUY', 'strength': 0.7, 'reasoning': 'Price at VWAP lower band - potential support'}
+        elif current_price >= vwap_upper:
+            signals['vwap_channel'] = {'signal': 'SELL', 'strength': 0.7, 'reasoning': 'Price at VWAP upper band - potential resistance'}
+        elif current_price > vwap_middle:
+            signals['vwap_channel'] = {'signal': 'BUY', 'strength': 0.5, 'reasoning': 'Price above VWAP - bullish bias'}
+        elif current_price < vwap_middle:
+            signals['vwap_channel'] = {'signal': 'SELL', 'strength': 0.5, 'reasoning': 'Price below VWAP - bearish bias'}
+        else:
+            signals['vwap_channel'] = {'signal': 'NEUTRAL', 'strength': 0.3, 'reasoning': 'Price near VWAP - neutral'}
         
         # Overall signal aggregation
         buy_signals = sum(1 for s in signals.values() if s['signal'] == 'BUY')
