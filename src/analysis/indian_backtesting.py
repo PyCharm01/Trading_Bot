@@ -17,11 +17,22 @@ import json
 from pathlib import Path
 
 # Import our custom modules
-from data.indian_market_data import IndianMarketDataFetcher
-from analysis.indian_technical_analysis import IndianMarketAnalyzer
-from options.indian_options_engine import IndianOptionsStrategyEngine
-from portfolio.indian_portfolio_simulator import IndianPortfolioSimulator
-from config.config import get_config, get_lot_size
+try:
+    from ..data.indian_market_data import IndianMarketDataFetcher
+    from .indian_technical_analysis import IndianMarketAnalyzer
+    from ..options.indian_options_engine import IndianOptionsStrategyEngine
+    from ..portfolio.indian_portfolio_simulator import IndianPortfolioSimulator
+    from ..config.config import get_config, get_lot_size
+except ImportError:
+    # Fallback for when running as main module
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from data.indian_market_data import IndianMarketDataFetcher
+    from analysis.indian_technical_analysis import IndianMarketAnalyzer
+    from options.indian_options_engine import IndianOptionsStrategyEngine
+    from portfolio.indian_portfolio_simulator import IndianPortfolioSimulator
+    from config.config import get_config, get_lot_size
 
 logger = logging.getLogger(__name__)
 
