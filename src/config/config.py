@@ -83,28 +83,45 @@ class AppConfig:
     BACKGROUND_COLOR: str = "#F8F9FA"
     GRID_COLOR: str = "#E9ECEF"
     
-    # API Keys (from environment variables)
-    NEWS_API_KEY: Optional[str] = None
-    TWITTER_API_KEY: Optional[str] = None
-    TWITTER_API_SECRET: Optional[str] = None
-    TWITTER_ACCESS_TOKEN: Optional[str] = None
-    TWITTER_ACCESS_SECRET: Optional[str] = None
-    ALPHA_VANTAGE_API_KEY: Optional[str] = None
-    QUANDL_API_KEY: Optional[str] = None
+    # API Keys (Direct configuration - no environment variables needed)
+    NEWS_API_KEY: str = "your_news_api_key_here"
+    TWITTER_API_KEY: str = "your_twitter_api_key_here"
+    TWITTER_API_SECRET: str = "your_twitter_api_secret_here"
+    TWITTER_ACCESS_TOKEN: str = "your_twitter_access_token_here"
+    TWITTER_ACCESS_SECRET: str = "your_twitter_access_secret_here"
+    ALPHA_VANTAGE_API_KEY: str = "UZ3VFKHQQEEGQMCZ"
+    QUANDL_API_KEY: str = "3iDzmsGkQEQmEznLxa-z"
+    
+    # Additional API Keys for Indian Markets
+    NSE_API_KEY: str = "your_nse_api_key_here"
+    BSE_API_KEY: str = "your_bse_api_key_here"
+    ZERODHA_API_KEY: str = "your_zerodha_api_key_here"
+    UPSTOX_API_KEY: str = "your_upstox_api_key_here"
+    FINNHUB_API_KEY: str = "your_finnhub_api_key_here"
+    POLYGON_API_KEY: str = "your_polygon_api_key_here"
     
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "%(asctime)s - %(levelname)s - %(message)s"
     
     def __post_init__(self):
-        """Load configuration from environment variables"""
-        self.NEWS_API_KEY = os.getenv('NEWS_API_KEY')
-        self.TWITTER_API_KEY = os.getenv('TWITTER_API_KEY')
-        self.TWITTER_API_SECRET = os.getenv('TWITTER_API_SECRET')
-        self.TWITTER_ACCESS_TOKEN = os.getenv('TWITTER_ACCESS_TOKEN')
-        self.TWITTER_ACCESS_SECRET = os.getenv('TWITTER_ACCESS_SECRET')
-        self.ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
-        self.QUANDL_API_KEY = os.getenv('QUANDL_API_KEY')
+        """Initialize configuration settings"""
+        # API Keys are now configured directly in the class definition above
+        # Only override with environment variables if they exist (for backward compatibility)
+        if os.getenv('NEWS_API_KEY'):
+            self.NEWS_API_KEY = os.getenv('NEWS_API_KEY')
+        if os.getenv('ALPHA_VANTAGE_API_KEY'):
+            self.ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
+        if os.getenv('QUANDL_API_KEY'):
+            self.QUANDL_API_KEY = os.getenv('QUANDL_API_KEY')
+        if os.getenv('TWITTER_API_KEY'):
+            self.TWITTER_API_KEY = os.getenv('TWITTER_API_KEY')
+        if os.getenv('TWITTER_API_SECRET'):
+            self.TWITTER_API_SECRET = os.getenv('TWITTER_API_SECRET')
+        if os.getenv('TWITTER_ACCESS_TOKEN'):
+            self.TWITTER_ACCESS_TOKEN = os.getenv('TWITTER_ACCESS_TOKEN')
+        if os.getenv('TWITTER_ACCESS_SECRET'):
+            self.TWITTER_ACCESS_SECRET = os.getenv('TWITTER_ACCESS_SECRET')
         
         # Initialize Indian market settings
         if self.TRADING_HOURS is None:
