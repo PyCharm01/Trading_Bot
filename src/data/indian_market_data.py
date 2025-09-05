@@ -14,6 +14,8 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 import requests
 from dataclasses import dataclass
+import pytz
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
@@ -97,8 +99,54 @@ class IndianMarketDataFetcher:
     """Comprehensive data fetcher for Indian market indices"""
     
     def __init__(self, alpha_vantage_api_key: Optional[str] = None, quandl_api_key: Optional[str] = None):
-        self.alpha_vantage_api_key = alpha_vantage_api_key
-        self.quandl_api_key = quandl_api_key
+        # Use provided API keys or fall back to config
+        try:
+            # Try multiple import strategies
+            try:
+                from ..config.config import get_config
+                config = get_config()
+            except ImportError:
+                try:
+                    from config.config import get_config
+                    config = get_config()
+                except ImportError:
+                    try:
+                        from src.config.config import get_config
+                        config = get_config()
+                    except ImportError:
+                        # Direct file import as final fallback
+                        import os
+                        import importlib.util
+                        config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'config.py')
+                        if os.path.exists(config_path):
+                            spec = importlib.util.spec_from_file_location("config", config_path)
+                            config_module = importlib.util.module_from_spec(spec)
+                            spec.loader.exec_module(config_module)
+                            config = config_module.get_config()
+                        else:
+                            # Use default values if config not found
+                            class DefaultConfig:
+                                ALPHA_VANTAGE_API_KEY = "your_alpha_vantage_api_key_here"
+                                QUANDL_API_KEY = "your_quandl_api_key_here"
+                                NEWS_API_KEY = "your_news_api_key_here"
+                                FINNHUB_API_KEY = "your_finnhub_api_key_here"
+                                POLYGON_API_KEY = "your_polygon_api_key_here"
+                            config = DefaultConfig()
+            
+            self.alpha_vantage_api_key = alpha_vantage_api_key or config.ALPHA_VANTAGE_API_KEY
+            self.quandl_api_key = quandl_api_key or config.QUANDL_API_KEY
+            self.news_api_key = config.NEWS_API_KEY
+            self.finnhub_api_key = config.FINNHUB_API_KEY
+            self.polygon_api_key = config.POLYGON_API_KEY
+            
+        except Exception as e:
+            # Fallback to default values if all import strategies fail
+            logger.warning(f"Could not load config: {e}. Using default values.")
+            self.alpha_vantage_api_key = alpha_vantage_api_key or "your_alpha_vantage_api_key_here"
+            self.quandl_api_key = quandl_api_key or "your_quandl_api_key_here"
+            self.news_api_key = "your_news_api_key_here"
+            self.finnhub_api_key = "your_finnhub_api_key_here"
+            self.polygon_api_key = "your_polygon_api_key_here"
         
         self.session = requests.Session()
         self.session.headers.update({
@@ -164,6 +212,109 @@ class IndianMarketDataFetcher:
         except Exception as e:
             logger.error(f"Error fetching Quandl data: {e}")
             return {}
+    
+    def fetch_news_data(self, symbol: str = "NIFTY", limit: int = 10) -> Dict[str, Any]:
+        """Fetch news data using News API"""
+        if not self.news_api_key or self.news_api_key == "your_news_api_key_here":
+            logger.warning("News API key not configured")
+            return self._generate_mock_news_data(symbol, limit)
+        
+        try:
+            url = "https://newsapi.org/v2/everything"
+            params = {
+                'q': f"{symbol} OR NSE OR BSE OR Indian stock market",
+                'apiKey': self.news_api_key,
+                'language': 'en',
+                'sortBy': 'publishedAt',
+                'pageSize': limit
+            }
+            
+            response = self.session.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            if data.get('status') == 'ok':
+                return {
+                    'articles': data.get('articles', []),
+                    'total_results': data.get('totalResults', 0),
+                    'source': 'News API'
+                }
+            else:
+                logger.warning(f"News API error: {data.get('message', 'Unknown error')}")
+                return self._generate_mock_news_data(symbol, limit)
+                
+        except Exception as e:
+            logger.error(f"Error fetching news data: {e}")
+            return self._generate_mock_news_data(symbol, limit)
+    
+    def fetch_finnhub_data(self, symbol: str) -> Dict[str, Any]:
+        """Fetch data from Finnhub API"""
+        if not self.finnhub_api_key or self.finnhub_api_key == "your_finnhub_api_key_here":
+            logger.warning("Finnhub API key not configured")
+            return {}
+        
+        try:
+            # Convert Indian symbols to Finnhub format
+            finnhub_symbol = self._convert_to_finnhub_symbol(symbol)
+            
+            url = "https://finnhub.io/api/v1/quote"
+            params = {
+                'symbol': finnhub_symbol,
+                'token': self.finnhub_api_key
+            }
+            
+            response = self.session.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            if data and 'c' in data:  # 'c' is current price
+                return {
+                    'current_price': data.get('c', 0),
+                    'change': data.get('d', 0),
+                    'change_percent': data.get('dp', 0),
+                    'high': data.get('h', 0),
+                    'low': data.get('l', 0),
+                    'open': data.get('o', 0),
+                    'previous_close': data.get('pc', 0),
+                    'source': 'Finnhub'
+                }
+            else:
+                logger.warning(f"No data received from Finnhub for {symbol}")
+                return {}
+                
+        except Exception as e:
+            logger.error(f"Error fetching Finnhub data: {e}")
+            return {}
+    
+    def _convert_to_finnhub_symbol(self, symbol: str) -> str:
+        """Convert Indian market symbols to Finnhub format"""
+        symbol_mapping = {
+            'NIFTY_50': '^NSEI',
+            'BANK_NIFTY': '^NSEBANK',
+            'SENSEX': '^BSESN',
+            'NIFTY_IT': '^CNXIT',
+            'NIFTY_AUTO': '^CNXAUTO',
+            'NIFTY_PHARMA': '^CNXPHARMA'
+        }
+        return symbol_mapping.get(symbol, symbol)
+    
+    def _generate_mock_news_data(self, symbol: str, limit: int) -> Dict[str, Any]:
+        """Generate mock news data when API is not available"""
+        mock_articles = []
+        for i in range(limit):
+            mock_articles.append({
+                'title': f"{symbol} Market Update - {i+1}",
+                'description': f"Latest market analysis and trends for {symbol} index",
+                'url': f"https://example.com/news/{i+1}",
+                'publishedAt': datetime.now().isoformat(),
+                'source': {'name': 'Mock News Source'}
+            })
+        
+        return {
+            'articles': mock_articles,
+            'total_results': limit,
+            'source': 'Mock Data'
+        }
     
     def fetch_index_data(self, symbol: str, period: str = "1y", interval: str = "1d") -> pd.DataFrame:
         """Fetch OHLCV data for Indian market indices"""
@@ -398,51 +549,119 @@ class IndianMarketDataFetcher:
             return {}
     
     def get_market_status(self) -> Dict[str, Any]:
-        """Get current market status (open/closed) and trading hours"""
+        """Get current market status (open/closed) and trading hours with proper timezone handling"""
         try:
-            now = datetime.now()
-            ist_now = now.replace(tzinfo=None)  # Assuming we're in IST
+            # Get current time in IST
+            ist = ZoneInfo('Asia/Kolkata')
+            now_utc = datetime.now(pytz.UTC)
+            now_ist = now_utc.astimezone(ist)
             
             # NSE trading hours (IST)
-            market_open = now.replace(hour=9, minute=15, second=0, microsecond=0)
-            market_close = now.replace(hour=15, minute=30, second=0, microsecond=0)
+            today = now_ist.date()
+            market_open = datetime.combine(today, datetime.min.time().replace(hour=9, minute=15))
+            market_close = datetime.combine(today, datetime.min.time().replace(hour=15, minute=30))
+            pre_market_open = datetime.combine(today, datetime.min.time().replace(hour=9, minute=0))
+            post_market_close = datetime.combine(today, datetime.min.time().replace(hour=16, minute=0))
+            
+            # Convert to IST timezone
+            market_open = market_open.replace(tzinfo=ist)
+            market_close = market_close.replace(tzinfo=ist)
+            pre_market_open = pre_market_open.replace(tzinfo=ist)
+            post_market_close = post_market_close.replace(tzinfo=ist)
             
             # Check if it's a weekday
-            is_weekday = now.weekday() < 5
+            is_weekday = now_ist.weekday() < 5
             
-            # Check if market is open
-            is_market_open = (is_weekday and 
-                            market_open <= now <= market_close)
+            # Determine market status
+            is_pre_market = is_weekday and pre_market_open <= now_ist < market_open
+            is_market_open = is_weekday and market_open <= now_ist <= market_close
+            is_post_market = is_weekday and market_close < now_ist <= post_market_close
+            is_market_closed = not is_weekday or now_ist < pre_market_open or now_ist > post_market_close
             
-            # Calculate time to open/close
+            # Determine current session
+            if is_pre_market:
+                current_session = "Pre-Market"
+                session_status = "Pre-Market Open"
+            elif is_market_open:
+                current_session = "Normal Trading"
+                session_status = "Market Open"
+            elif is_post_market:
+                current_session = "Post-Market"
+                session_status = "Post-Market Open"
+            else:
+                current_session = "Closed"
+                session_status = "Market Closed"
+            
+            # Calculate time to next event
             if is_market_open:
-                time_to_close = market_close - now
+                time_to_close = market_close - now_ist
                 next_event = "Market closes in"
                 next_event_time = time_to_close
+            elif is_pre_market:
+                time_to_open = market_open - now_ist
+                next_event = "Normal trading starts in"
+                next_event_time = time_to_open
+            elif is_post_market:
+                time_to_close = post_market_close - now_ist
+                next_event = "Post-market closes in"
+                next_event_time = time_to_close
             else:
-                if now < market_open:
-                    time_to_open = market_open - now
-                    next_event = "Market opens in"
+                # Market closed, find next opening
+                if now_ist < pre_market_open:
+                    # Before pre-market today
+                    time_to_open = pre_market_open - now_ist
+                    next_event = "Pre-market opens in"
                     next_event_time = time_to_open
                 else:
-                    # Market closed for the day, next opening is tomorrow
-                    next_open = market_open + timedelta(days=1)
-                    time_to_open = next_open - now
-                    next_event = "Market opens in"
+                    # After post-market, next opening is tomorrow
+                    next_day = today + timedelta(days=1)
+                    # Skip weekends
+                    while next_day.weekday() >= 5:
+                        next_day += timedelta(days=1)
+                    
+                    next_pre_market = datetime.combine(next_day, datetime.min.time().replace(hour=9, minute=0)).replace(tzinfo=ist)
+                    time_to_open = next_pre_market - now_ist
+                    next_event = "Pre-market opens in"
                     next_event_time = time_to_open
+            
+            # Format time duration
+            total_seconds = int(next_event_time.total_seconds())
+            hours, remainder = divmod(total_seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            
+            if hours > 0:
+                time_str = f"{hours}h {minutes}m"
+            elif minutes > 0:
+                time_str = f"{minutes}m {seconds}s"
+            else:
+                time_str = f"{seconds}s"
             
             return {
                 'is_market_open': is_market_open,
+                'is_pre_market': is_pre_market,
+                'is_post_market': is_post_market,
+                'is_market_closed': is_market_closed,
                 'is_weekday': is_weekday,
-                'current_time': now.isoformat(),
-                'market_open_time': market_open.isoformat(),
-                'market_close_time': market_close.isoformat(),
+                'current_session': current_session,
+                'session_status': session_status,
+                'current_time_ist': now_ist.strftime('%Y-%m-%d %H:%M:%S IST'),
+                'current_time_utc': now_utc.strftime('%Y-%m-%d %H:%M:%S UTC'),
+                'market_open_time': market_open.strftime('%H:%M IST'),
+                'market_close_time': market_close.strftime('%H:%M IST'),
+                'pre_market_open': pre_market_open.strftime('%H:%M IST'),
+                'post_market_close': post_market_close.strftime('%H:%M IST'),
                 'next_event': next_event,
-                'next_event_time': str(next_event_time).split('.')[0],  # Remove microseconds
+                'next_event_time': time_str,
                 'trading_hours': {
                     'pre_market': '09:00 - 09:15 IST',
                     'normal_trading': '09:15 - 15:30 IST',
-                    'post_market': '15:40 - 16:00 IST'
+                    'post_market': '15:30 - 16:00 IST'
+                },
+                'market_info': {
+                    'exchange': 'NSE (National Stock Exchange)',
+                    'timezone': 'Asia/Kolkata (IST)',
+                    'trading_days': 'Monday to Friday',
+                    'holidays': 'National holidays and exchange-specific holidays'
                 }
             }
             
@@ -450,6 +669,138 @@ class IndianMarketDataFetcher:
             logger.error(f"Error getting market status: {e}")
             return {
                 'is_market_open': False,
+                'is_market_closed': True,
+                'session_status': 'Error',
+                'error': str(e),
+                'current_time_ist': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'trading_hours': {
+                    'pre_market': '09:00 - 09:15 IST',
+                    'normal_trading': '09:15 - 15:30 IST',
+                    'post_market': '15:30 - 16:00 IST'
+                }
+            }
+    
+    def fetch_realtime_data(self, symbol: str) -> Dict[str, Any]:
+        """Fetch real-time data for Indian market indices"""
+        try:
+            if symbol not in INDIAN_MARKET_SYMBOLS:
+                raise ValueError(f"Symbol {symbol} not found in Indian market symbols")
+            
+            yahoo_symbol = INDIAN_MARKET_SYMBOLS[symbol].yahoo_symbol
+            ticker = yf.Ticker(yahoo_symbol)
+            
+            # Get real-time info
+            info = ticker.info
+            
+            # Get latest data (1 minute interval for last 2 days to get most recent)
+            data = ticker.history(period="2d", interval="1m")
+            
+            if data.empty:
+                raise ValueError(f"No real-time data found for {symbol}")
+            
+            # Convert to IST timezone
+            if data.index.tz is None:
+                data.index = data.index.tz_localize('UTC')
+            data.index = data.index.tz_convert('Asia/Kolkata')
+            
+            # Get latest values
+            latest = data.iloc[-1]
+            
+            # Calculate real-time metrics
+            current_price = latest['Close']
+            prev_close = data.iloc[-2]['Close'] if len(data) > 1 else current_price
+            change = current_price - prev_close
+            change_percent = (change / prev_close) * 100 if prev_close != 0 else 0
+            
+            # Get market status
+            market_status = self.get_market_status()
+            
+            # Calculate intraday high/low
+            today_data = data[data.index.date == data.index[-1].date()]
+            if not today_data.empty:
+                intraday_high = today_data['High'].max()
+                intraday_low = today_data['Low'].min()
+                volume = today_data['Volume'].sum()
+            else:
+                intraday_high = current_price
+                intraday_low = current_price
+                volume = latest['Volume']
+            
+            return {
+                'symbol': symbol,
+                'name': INDIAN_MARKET_SYMBOLS[symbol].name,
+                'current_price': round(current_price, 2),
+                'previous_close': round(prev_close, 2),
+                'change': round(change, 2),
+                'change_percent': round(change_percent, 2),
+                'intraday_high': round(intraday_high, 2),
+                'intraday_low': round(intraday_low, 2),
+                'volume': int(volume),
+                'last_updated': data.index[-1].strftime('%Y-%m-%d %H:%M:%S IST'),
+                'market_status': market_status,
+                'data_source': 'Yahoo Finance',
+                'is_realtime': market_status.get('is_market_open', False),
+                'trading_session': market_status.get('current_session', 'Unknown')
+            }
+            
+        except Exception as e:
+            logger.error(f"Error fetching real-time data for {symbol}: {e}")
+            # Return mock real-time data
+            return self._generate_mock_realtime_data(symbol)
+    
+    def _generate_mock_realtime_data(self, symbol: str) -> Dict[str, Any]:
+        """Generate mock real-time data for demonstration"""
+        try:
+            # Get some historical data to base mock data on
+            data = self.fetch_index_data(symbol, period="5d")
+            if not data.empty:
+                latest = data.iloc[-1]
+                base_price = latest['Close']
+                
+                # Simulate small price movement
+                import random
+                change_percent = random.uniform(-2, 2)  # ±2% change
+                change = base_price * (change_percent / 100)
+                current_price = base_price + change
+                
+                market_status = self.get_market_status()
+                
+                return {
+                    'symbol': symbol,
+                    'name': INDIAN_MARKET_SYMBOLS[symbol].name,
+                    'current_price': round(current_price, 2),
+                    'previous_close': round(base_price, 2),
+                    'change': round(change, 2),
+                    'change_percent': round(change_percent, 2),
+                    'intraday_high': round(current_price * 1.01, 2),
+                    'intraday_low': round(current_price * 0.99, 2),
+                    'volume': random.randint(1000000, 5000000),
+                    'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S IST'),
+                    'market_status': market_status,
+                    'data_source': 'Mock Data (Demo)',
+                    'is_realtime': False,
+                    'trading_session': 'Mock Session'
+                }
+            else:
+                raise ValueError("No data available for mock generation")
+                
+        except Exception as e:
+            logger.error(f"Error generating mock real-time data: {e}")
+            return {
+                'symbol': symbol,
+                'name': symbol,
+                'current_price': 0.0,
+                'previous_close': 0.0,
+                'change': 0.0,
+                'change_percent': 0.0,
+                'intraday_high': 0.0,
+                'intraday_low': 0.0,
+                'volume': 0,
+                'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S IST'),
+                'market_status': self.get_market_status(),
+                'data_source': 'Error',
+                'is_realtime': False,
+                'trading_session': 'Error',
                 'error': str(e)
             }
     
