@@ -1296,7 +1296,11 @@ class IndianTradingApp:
             if portfolio_summary:
                 capital_util = portfolio_summary.get('capital_utilization', {})
                 # Get live prices first
-                live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                try:
+                    live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                except AttributeError:
+                    # Fallback if method doesn't exist
+                    live_prices = {}
                 real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
                 
                 col_cap1, col_cap2, col_cap3, col_cap4 = st.columns(4)
@@ -1427,7 +1431,11 @@ class IndianTradingApp:
                 st.subheader("📊 Capital Utilization Report")
                 portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
                 # Get live prices for real-time metrics
-                live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                try:
+                    live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                except AttributeError:
+                    # Fallback if method doesn't exist
+                    live_prices = {}
                 real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
                 
                 if portfolio_summary:
@@ -1475,7 +1483,11 @@ class IndianTradingApp:
             portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
             if portfolio_summary:
                 # Get real-time metrics for accurate display
-                live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                try:
+                    live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                except AttributeError:
+                    # Fallback if method doesn't exist
+                    live_prices = {}
                 real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
                 
                 col1, col2, col3 = st.columns(3)
@@ -1526,7 +1538,11 @@ class IndianTradingApp:
                         
                         # Get current available capital
                         portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
-                        live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                        try:
+                            live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                        except AttributeError:
+                            # Fallback if method doesn't exist
+                            live_prices = {}
                         real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
                         available_capital = real_time_metrics.get('available_capital', 0)
                         
@@ -1565,7 +1581,11 @@ class IndianTradingApp:
                             else:
                                 # Get current capital status for better error message
                                 portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
-                                live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                                try:
+                                    live_prices = st.session_state.portfolio_simulator.get_live_market_data(self.data_fetcher)
+                                except AttributeError:
+                                    # Fallback if method doesn't exist
+                                    live_prices = {}
                                 real_time_metrics = st.session_state.portfolio_simulator.calculate_real_time_metrics(live_prices)
                                 available_capital = real_time_metrics.get('available_capital', 0)
                                 
