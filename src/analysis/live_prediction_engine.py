@@ -31,11 +31,17 @@ logger = logging.getLogger(__name__)
 class PredictionResult:
     """Result of a price prediction"""
     current_price: float
+    predicted_price_1m: float
+    predicted_price_2m: float
     predicted_price_5m: float
     predicted_price_10m: float
+    confidence_1m: float
+    confidence_2m: float
     confidence_5m: float
     confidence_10m: float
-    direction_5m: str  # 'UP', 'DOWN', 'SIDEWAYS'
+    direction_1m: str  # 'UP', 'DOWN', 'SIDEWAYS'
+    direction_2m: str
+    direction_5m: str
     direction_10m: str
     entry_signal: str  # 'BUY', 'SELL', 'HOLD'
     risk_level: str  # 'LOW', 'MEDIUM', 'HIGH'
@@ -204,7 +210,7 @@ class LivePredictionEngine:
             return False
     
     def predict_prices(self, data: pd.DataFrame) -> PredictionResult:
-        """Predict next 5m and 10m prices"""
+        """Predict next 1m, 2m, 5m and 10m prices"""
         try:
             current_price = data['Close'].iloc[-1]
             current_time = datetime.now()
@@ -215,41 +221,58 @@ class LivePredictionEngine:
                 latest_features = features.iloc[-1:].fillna(0)
                 features_scaled = self.scaler.transform(latest_features)
                 
-                # Get predictions
+                # Get predictions for all timeframes
+                pred_1m_change = self.model_5m.predict(features_scaled)[0] * 0.2  # Scale down for 1m
+                pred_2m_change = self.model_5m.predict(features_scaled)[0] * 0.4  # Scale down for 2m
                 pred_5m_change = self.model_5m.predict(features_scaled)[0]
                 pred_10m_change = self.model_10m.predict(features_scaled)[0]
                 
+                predicted_price_1m = current_price * (1 + pred_1m_change)
+                predicted_price_2m = current_price * (1 + pred_2m_change)
                 predicted_price_5m = current_price * (1 + pred_5m_change)
                 predicted_price_10m = current_price * (1 + pred_10m_change)
                 
-                # Calculate confidence based on model performance
+                # Calculate confidence based on model performance (shorter timeframes have higher confidence)
+                confidence_1m = min(0.98, max(0.3, 0.8 + abs(pred_1m_change) * 15))
+                confidence_2m = min(0.95, max(0.2, 0.75 + abs(pred_2m_change) * 12))
                 confidence_5m = min(0.95, max(0.1, 0.7 + abs(pred_5m_change) * 10))
                 confidence_10m = min(0.95, max(0.1, 0.6 + abs(pred_10m_change) * 8))
                 
             else:
                 # Use statistical methods
+                predicted_price_1m, confidence_1m = self._statistical_prediction(data, 1)
+                predicted_price_2m, confidence_2m = self._statistical_prediction(data, 2)
                 predicted_price_5m, confidence_5m = self._statistical_prediction(data, 5)
                 predicted_price_10m, confidence_10m = self._statistical_prediction(data, 10)
             
-            # Determine direction
+            # Determine direction for all timeframes
+            direction_1m = self._get_direction(current_price, predicted_price_1m)
+            direction_2m = self._get_direction(current_price, predicted_price_2m)
             direction_5m = self._get_direction(current_price, predicted_price_5m)
             direction_10m = self._get_direction(current_price, predicted_price_10m)
             
-            # Generate entry signal
+            # Generate entry signal based on all timeframes
             entry_signal = self._generate_entry_signal(
-                current_price, predicted_price_5m, predicted_price_10m,
-                confidence_5m, confidence_10m
+                current_price, predicted_price_1m, predicted_price_2m, 
+                predicted_price_5m, predicted_price_10m,
+                confidence_1m, confidence_2m, confidence_5m, confidence_10m
             )
             
-            # Calculate risk level
-            risk_level = self._calculate_risk_level(confidence_5m, confidence_10m)
+            # Calculate risk level based on all confidences
+            risk_level = self._calculate_risk_level(confidence_1m, confidence_2m, confidence_5m, confidence_10m)
             
             result = PredictionResult(
                 current_price=current_price,
+                predicted_price_1m=predicted_price_1m,
+                predicted_price_2m=predicted_price_2m,
                 predicted_price_5m=predicted_price_5m,
                 predicted_price_10m=predicted_price_10m,
+                confidence_1m=confidence_1m,
+                confidence_2m=confidence_2m,
                 confidence_5m=confidence_5m,
                 confidence_10m=confidence_10m,
+                direction_1m=direction_1m,
+                direction_2m=direction_2m,
                 direction_5m=direction_5m,
                 direction_10m=direction_10m,
                 entry_signal=entry_signal,
@@ -306,28 +329,39 @@ class LivePredictionEngine:
         else:
             return 'SIDEWAYS'
     
-    def _generate_entry_signal(self, current_price: float, pred_5m: float, pred_10m: float,
+    def _generate_entry_signal(self, current_price: float, pred_1m: float, pred_2m: float,
+                             pred_5m: float, pred_10m: float, conf_1m: float, conf_2m: float,
                              conf_5m: float, conf_10m: float) -> str:
-        """Generate market entry signal"""
-        # Calculate expected returns
+        """Generate market entry signal based on all timeframes"""
+        # Calculate expected returns for all timeframes
+        return_1m = (pred_1m - current_price) / current_price
+        return_2m = (pred_2m - current_price) / current_price
         return_5m = (pred_5m - current_price) / current_price
         return_10m = (pred_10m - current_price) / current_price
         
-        # Weighted confidence
-        avg_confidence = (conf_5m + conf_10m) / 2
-        avg_return = (return_5m + return_10m) / 2
+        # Weighted confidence (shorter timeframes get higher weight)
+        weights = [0.4, 0.3, 0.2, 0.1]  # 1m, 2m, 5m, 10m
+        avg_confidence = (conf_1m * weights[0] + conf_2m * weights[1] + 
+                         conf_5m * weights[2] + conf_10m * weights[3])
         
-        # Signal logic
-        if avg_confidence > 0.7 and avg_return > 0.002:  # 0.2% threshold
+        # Weighted return (shorter timeframes get higher weight)
+        avg_return = (return_1m * weights[0] + return_2m * weights[1] + 
+                     return_5m * weights[2] + return_10m * weights[3])
+        
+        # Signal logic with more sensitive thresholds for short-term trading
+        if avg_confidence > 0.75 and avg_return > 0.001:  # 0.1% threshold for short-term
             return 'BUY'
-        elif avg_confidence > 0.7 and avg_return < -0.002:
+        elif avg_confidence > 0.75 and avg_return < -0.001:
             return 'SELL'
         else:
             return 'HOLD'
     
-    def _calculate_risk_level(self, conf_5m: float, conf_10m: float) -> str:
-        """Calculate risk level based on confidence"""
-        avg_confidence = (conf_5m + conf_10m) / 2
+    def _calculate_risk_level(self, conf_1m: float, conf_2m: float, conf_5m: float, conf_10m: float) -> str:
+        """Calculate risk level based on confidence across all timeframes"""
+        # Weighted confidence (shorter timeframes get higher weight)
+        weights = [0.4, 0.3, 0.2, 0.1]  # 1m, 2m, 5m, 10m
+        avg_confidence = (conf_1m * weights[0] + conf_2m * weights[1] + 
+                         conf_5m * weights[2] + conf_10m * weights[3])
         
         if avg_confidence > 0.8:
             return 'LOW'
@@ -341,10 +375,16 @@ class LivePredictionEngine:
         current_price = data['Close'].iloc[-1]
         return PredictionResult(
             current_price=current_price,
+            predicted_price_1m=current_price,
+            predicted_price_2m=current_price,
             predicted_price_5m=current_price,
             predicted_price_10m=current_price,
+            confidence_1m=0.5,
+            confidence_2m=0.5,
             confidence_5m=0.5,
             confidence_10m=0.5,
+            direction_1m='SIDEWAYS',
+            direction_2m='SIDEWAYS',
             direction_5m='SIDEWAYS',
             direction_10m='SIDEWAYS',
             entry_signal='HOLD',
