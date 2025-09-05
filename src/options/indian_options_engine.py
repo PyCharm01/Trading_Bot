@@ -130,6 +130,10 @@ class IndianOptionsStrategyEngine:
             'NIFTY_PHARMA': 25
         }
     
+    def get_lot_size(self, symbol: str) -> int:
+        """Get lot size for a given symbol"""
+        return self.lot_sizes.get(symbol.upper(), 50)  # Default to 50 if not found
+    
     def analyze_options_chain(self, options_data: Dict, current_price: float, index_name: str) -> Dict[str, Any]:
         """Analyze options chain for Indian market indices"""
         try:
