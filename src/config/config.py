@@ -97,8 +97,8 @@ class AppConfig:
     BSE_API_KEY: str = "your_bse_api_key_here"
     ZERODHA_API_KEY: str = "your_zerodha_api_key_here"
     UPSTOX_API_KEY: str = "your_upstox_api_key_here"
-    FINNHUB_API_KEY: str = "your_finnhub_api_key_here"
-    POLYGON_API_KEY: str = "your_polygon_api_key_here"
+    FINNHUB_API_KEY: str = "d2tbtf9r01qkuv3k7mu0d2tbtf9r01qkuv3k7mug"
+    POLYGON_API_KEY: str = "TwMlzxH1FcQE9jzqvLbspp0uDZoU6L0Q"
     
     # Logging
     LOG_LEVEL: str = "INFO"
