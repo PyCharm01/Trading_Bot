@@ -1498,21 +1498,67 @@ class IndianTradingApp:
                 """, unsafe_allow_html=True)
             
             with col2:
-                # Direction analysis
-                st.markdown(f"""
-                <div style="padding: 20px; border-radius: 10px; background-color: #f0f2f6; border-left: 5px solid #1f77b4;">
-                    <h3 style="color: #1f77b4; margin-top: 0;">Direction Analysis</h3>
-                    <p><strong>1m Direction:</strong> {prediction.direction_1m}</p>
-                    <p><strong>2m Direction:</strong> {prediction.direction_2m}</p>
-                    <p><strong>5m Direction:</strong> {prediction.direction_5m}</p>
-                    <p><strong>10m Direction:</strong> {prediction.direction_10m}</p>
-                    <p><strong>Risk Level:</strong> {prediction.risk_level}</p>
-                    <p><strong>1m Confidence:</strong> {prediction.confidence_1m:.1%}</p>
-                    <p><strong>2m Confidence:</strong> {prediction.confidence_2m:.1%}</p>
-                    <p><strong>5m Confidence:</strong> {prediction.confidence_5m:.1%}</p>
-                    <p><strong>10m Confidence:</strong> {prediction.confidence_10m:.1%}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                # Enhanced Direction Analysis with Price Predictions and Market Trends
+                st.subheader("📊 Direction Analysis & Market Trends")
+                
+                # Helper function to get color for status
+                def get_status_color(status, status_type="direction"):
+                    if status_type == "direction":
+                        return "🟢" if status == "UP" else "🔴" if status == "DOWN" else "🟡"
+                    elif status_type == "trend":
+                        return "🟢" if status == "BULLISH" else "🔴" if status == "BEARISH" else "🟡"
+                    elif status_type == "strength":
+                        return "🟢" if status == "STRONG" else "🟡" if status == "MODERATE" else "🔴"
+                    elif status_type == "risk":
+                        return "🟢" if status == "LOW" else "🟡" if status == "MEDIUM" else "🔴"
+                    return "⚪"
+                
+                # 1-Minute Analysis
+                with st.expander("🎯 1-Minute Analysis", expanded=True):
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.metric("Price Prediction", f"₹{prediction.predicted_price_1m:,.2f}", f"{prediction.price_change_1m:+.2f}%")
+                        st.write(f"**Direction:** {get_status_color(prediction.direction_1m)} {prediction.direction_1m}")
+                    with col_b:
+                        st.metric("Confidence", f"{prediction.confidence_1m:.1%}")
+                        st.write(f"**Trend:** {get_status_color(prediction.trend_1m, 'trend')} {prediction.trend_1m}")
+                    st.write(f"**Trend Strength:** {get_status_color(prediction.trend_strength_1m, 'strength')} {prediction.trend_strength_1m}")
+                
+                # 2-Minute Analysis
+                with st.expander("🎯 2-Minute Analysis", expanded=True):
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.metric("Price Prediction", f"₹{prediction.predicted_price_2m:,.2f}", f"{prediction.price_change_2m:+.2f}%")
+                        st.write(f"**Direction:** {get_status_color(prediction.direction_2m)} {prediction.direction_2m}")
+                    with col_b:
+                        st.metric("Confidence", f"{prediction.confidence_2m:.1%}")
+                        st.write(f"**Trend:** {get_status_color(prediction.trend_2m, 'trend')} {prediction.trend_2m}")
+                    st.write(f"**Trend Strength:** {get_status_color(prediction.trend_strength_2m, 'strength')} {prediction.trend_strength_2m}")
+                
+                # 5-Minute Analysis
+                with st.expander("🎯 5-Minute Analysis", expanded=True):
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.metric("Price Prediction", f"₹{prediction.predicted_price_5m:,.2f}", f"{prediction.price_change_5m:+.2f}%")
+                        st.write(f"**Direction:** {get_status_color(prediction.direction_5m)} {prediction.direction_5m}")
+                    with col_b:
+                        st.metric("Confidence", f"{prediction.confidence_5m:.1%}")
+                        st.write(f"**Trend:** {get_status_color(prediction.trend_5m, 'trend')} {prediction.trend_5m}")
+                    st.write(f"**Trend Strength:** {get_status_color(prediction.trend_strength_5m, 'strength')} {prediction.trend_strength_5m}")
+                
+                # 10-Minute Analysis
+                with st.expander("🎯 10-Minute Analysis", expanded=True):
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.metric("Price Prediction", f"₹{prediction.predicted_price_10m:,.2f}", f"{prediction.price_change_10m:+.2f}%")
+                        st.write(f"**Direction:** {get_status_color(prediction.direction_10m)} {prediction.direction_10m}")
+                    with col_b:
+                        st.metric("Confidence", f"{prediction.confidence_10m:.1%}")
+                        st.write(f"**Trend:** {get_status_color(prediction.trend_10m, 'trend')} {prediction.trend_10m}")
+                    st.write(f"**Trend Strength:** {get_status_color(prediction.trend_strength_10m, 'strength')} {prediction.trend_strength_10m}")
+                
+                # Overall Risk Level
+                st.info(f"**Overall Risk Level:** {get_status_color(prediction.risk_level, 'risk')} {prediction.risk_level}")
             
             # Trading recommendations
             st.subheader("💡 Trading Recommendations")
