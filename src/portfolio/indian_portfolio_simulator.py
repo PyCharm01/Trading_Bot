@@ -88,6 +88,7 @@ class IndianPortfolioSimulator:
         self.trades: List[Trade] = []
         self.portfolio_history: List[Dict] = []
         self.daily_returns: List[float] = []
+        self.capital_transactions = []  # Track all capital transactions
         
         # Indian market specific parameters
         self.lot_sizes = {
@@ -105,14 +106,14 @@ class IndianPortfolioSimulator:
         self.stamp_duty = 0.0001  # 0.01% stamp duty
         self.exchange_charges = 0.0001  # 0.01% exchange charges
         
-        # Margin requirements
+        # NIFTY 50 margin requirements (using NIFTY 50 margin structure for all instruments)
         self.margin_requirements = {
-            'NIFTY_50': 0.15,  # 15% of notional value
-            'BANK_NIFTY': 0.15,
-            'SENSEX': 0.15,
-            'NIFTY_IT': 0.15,
-            'NIFTY_AUTO': 0.15,
-            'NIFTY_PHARMA': 0.15
+            'NIFTY_50': 0.12,      # 12% for NIFTY 50 (standard NIFTY 50 margin)
+            'BANK_NIFTY': 0.12,    # 12% for Bank Nifty (using NIFTY 50 margin)
+            'SENSEX': 0.12,        # 12% for Sensex (using NIFTY 50 margin)
+            'NIFTY_IT': 0.12,      # 12% for NIFTY IT (using NIFTY 50 margin)
+            'NIFTY_AUTO': 0.12,    # 12% for NIFTY Auto (using NIFTY 50 margin)
+            'NIFTY_PHARMA': 0.12   # 12% for NIFTY Pharma (using NIFTY 50 margin)
         }
         
         # Risk management parameters
@@ -122,6 +123,56 @@ class IndianPortfolioSimulator:
         
         self.peak_value = initial_capital
         self.max_drawdown = 0.0
+    
+    def add_capital(self, amount: float) -> bool:
+        """Add capital to the portfolio"""
+        try:
+            if amount > 0:
+                self.initial_capital += amount
+                self.available_capital += amount
+                
+                # Log the transaction
+                transaction = {
+                    'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'type': 'ADD_CAPITAL',
+                    'amount': amount,
+                    'new_total': self.initial_capital
+                }
+                self.capital_transactions.append(transaction)
+                
+                logger.info(f"Added ₹{amount:,.2f} to portfolio. New capital: ₹{self.initial_capital:,.2f}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error adding capital: {e}")
+            return False
+    
+    def reset_capital(self, new_capital: float) -> bool:
+        """Reset portfolio capital"""
+        try:
+            if new_capital > 0:
+                # Close all positions first
+                for position_id in list(self.positions.keys()):
+                    self.close_position(position_id)
+                
+                # Log the transaction
+                transaction = {
+                    'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'type': 'RESET_CAPITAL',
+                    'amount': new_capital - self.initial_capital,
+                    'new_total': new_capital
+                }
+                self.capital_transactions.append(transaction)
+                
+                # Reset capital
+                self.initial_capital = new_capital
+                self.available_capital = new_capital
+                logger.info(f"Portfolio capital reset to ₹{new_capital:,.2f}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error resetting capital: {e}")
+            return False
         
     def add_position(self, symbol: str, instrument_type: str, quantity: int, 
                     entry_price: float, strategy: str, expiry: Optional[str] = None,
@@ -134,14 +185,19 @@ class IndianPortfolioSimulator:
             # Calculate notional value
             notional_value = quantity * lot_size * entry_price
             
-            # Calculate margin required
-            margin_rate = self.margin_requirements.get(symbol, 0.15)
+            # Calculate margin required using NIFTY 50 margin requirements
+            margin_rate = self.margin_requirements.get(symbol, 0.12)  # 12% NIFTY 50 margin
             margin_required = notional_value * margin_rate
             
-            # Check if sufficient capital available
+            # Check if sufficient capital available (with some flexibility for paper trading)
+            # Allow positions even if capital is low, but warn the user
             if margin_required > self.available_capital:
-                logger.warning(f"Insufficient capital for {symbol} position. Required: {margin_required}, Available: {self.available_capital}")
-                return False
+                if margin_required > self.available_capital * 1.5:  # Only block if way over limit
+                    logger.warning(f"Insufficient capital for {symbol} position. Required: {margin_required}, Available: {self.available_capital}")
+                    return False
+                else:
+                    logger.info(f"Low capital warning: Required: {margin_required}, Available: {self.available_capital}")
+                    # Continue with position but mark as low capital
             
             # Create position
             position_id = f"{symbol}_{instrument_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -627,6 +683,89 @@ class IndianPortfolioSimulator:
             logger.error(f"Error checking risk limits: {e}")
             return {'risk_alerts': [], 'risk_score': 0, 'within_limits': True}
     
+    def get_live_market_data(self, data_fetcher) -> Dict[str, float]:
+        """Get live market data for all symbols in the portfolio"""
+        live_prices = {}
+        symbols = set(pos.symbol for pos in self.positions.values() if pos.status == 'open')
+        
+        for symbol in symbols:
+            try:
+                symbol_mapping = {
+                    'NIFTY_50': 'NIFTY_50',
+                    'BANK_NIFTY': 'BANK_NIFTY', 
+                    'SENSEX': 'SENSEX'
+                }
+                
+                symbol_key = symbol_mapping.get(symbol, symbol)
+                current_data = data_fetcher.fetch_index_data(symbol_key, "1d", "1m")
+                
+                if not current_data.empty:
+                    live_prices[symbol] = current_data['Close'].iloc[-1]
+                else:
+                    # Use last known price if no new data
+                    for pos in self.positions.values():
+                        if pos.symbol == symbol and pos.status == 'open':
+                            live_prices[symbol] = pos.current_price
+                            break
+                            
+            except Exception as e:
+                logger.error(f"Error fetching live data for {symbol}: {e}")
+                # Use last known price as fallback
+                for pos in self.positions.values():
+                    if pos.symbol == symbol and pos.status == 'open':
+                        live_prices[symbol] = pos.current_price
+                        break
+        
+        return live_prices
+    
+    def calculate_real_time_metrics(self, live_prices: Dict[str, float]) -> Dict[str, Any]:
+        """Calculate real-time portfolio metrics"""
+        try:
+            total_unrealized_pnl = 0
+            total_investment = 0
+            total_margin_used = 0
+            position_count = 0
+            
+            for position in self.positions.values():
+                if position.status == 'open':
+                    current_price = live_prices.get(position.symbol, position.current_price)
+                    position.current_price = current_price
+                    
+                    # Calculate P&L
+                    if position.strategy == 'Long':
+                        pnl = (current_price - position.entry_price) * position.quantity * position.lot_size
+                    else:  # Short
+                        pnl = (position.entry_price - current_price) * position.quantity * position.lot_size
+                    
+                    position.unrealized_pnl = pnl
+                    position.unrealized_pnl_percent = (pnl / (position.entry_price * position.quantity * position.lot_size)) * 100 if position.entry_price > 0 else 0
+                    
+                    total_unrealized_pnl += pnl
+                    total_investment += position.entry_price * position.quantity * position.lot_size
+                    total_margin_used += position.margin_used
+                    position_count += 1
+            
+            # Calculate portfolio metrics
+            total_value = self.initial_capital + total_unrealized_pnl
+            total_pnl_percent = (total_unrealized_pnl / self.initial_capital) * 100 if self.initial_capital > 0 else 0
+            
+            return {
+                'total_value': total_value,
+                'total_pnl': total_unrealized_pnl,
+                'total_pnl_percent': total_pnl_percent,
+                'unrealized_pnl': total_unrealized_pnl,
+                'unrealized_pnl_percent': total_pnl_percent,
+                'total_investment': total_investment,
+                'margin_used': total_margin_used,
+                'available_capital': self.available_capital,
+                'position_count': position_count,
+                'live_prices': live_prices
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating real-time metrics: {e}")
+            return {}
+    
     def update_all_positions_with_live_data(self, data_fetcher) -> Dict[str, Any]:
         """Update all positions with live market data for paper trading"""
         try:
@@ -652,7 +791,7 @@ class IndianPortfolioSimulator:
                             position.current_price = current_price
                             
                             # Calculate P&L
-                            if position.position_type == 'Long':
+                            if position.strategy == 'Long':
                                 pnl = (current_price - position.entry_price) * position.quantity * position.lot_size
                             else:  # Short
                                 pnl = (position.entry_price - current_price) * position.quantity * position.lot_size
@@ -669,11 +808,11 @@ class IndianPortfolioSimulator:
                                 'quantity': position.quantity,
                                 'entry_price': position.entry_price,
                                 'current_price': current_price,
-                                'position_type': position.position_type,
+                                'strategy': position.strategy,
                                 'unrealized_pnl': pnl,
                                 'unrealized_pnl_percent': position.unrealized_pnl_percent,
                                 'lot_size': position.lot_size,
-                                'timestamp': position.timestamp,
+                                'entry_time': position.entry_time,
                                 'status': position.status
                             })
                         else:
@@ -684,11 +823,11 @@ class IndianPortfolioSimulator:
                                 'quantity': position.quantity,
                                 'entry_price': position.entry_price,
                                 'current_price': position.current_price,
-                                'position_type': position.position_type,
+                                'strategy': position.strategy,
                                 'unrealized_pnl': position.unrealized_pnl,
                                 'unrealized_pnl_percent': position.unrealized_pnl_percent,
                                 'lot_size': position.lot_size,
-                                'timestamp': position.timestamp,
+                                'entry_time': position.entry_time,
                                 'status': position.status
                             })
                             
