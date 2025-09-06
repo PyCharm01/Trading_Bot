@@ -84,6 +84,11 @@ class Optimized1MDataFetcher:
                     logger.info(f"Using cached 1m data for {symbol}")
                     return cached_data
             
+            # Limit days to avoid API issues
+            if days > 30:
+                logger.warning(f"Limiting days from {days} to 30 to avoid API issues")
+                days = 30
+            
             # Fetch data in chunks to avoid API limits
             all_data = []
             chunk_days = min(7, days)  # Fetch max 7 days per chunk
@@ -147,8 +152,7 @@ class Optimized1MDataFetcher:
                         period=period,
                         interval="1m",
                         auto_adjust=True,
-                        prepost=True,
-                        threads=True
+                        prepost=True
                     )
                     
                     if not data.empty:
@@ -168,6 +172,32 @@ class Optimized1MDataFetcher:
                     if attempt < max_retries - 1:
                         time.sleep(2)
                     continue
+            
+            # If all attempts failed, try with different parameters
+            try:
+                logger.info("Trying fallback method with different parameters...")
+                data = ticker.history(
+                    period=period,
+                    interval="1m",
+                    auto_adjust=False,
+                    prepost=False
+                )
+                
+                if not data.empty:
+                    # Filter for the specific date range
+                    data = data[(data.index >= start_date) & (data.index <= end_date)]
+                    
+                    if not data.empty:
+                        # Convert to IST
+                        if data.index.tz is None:
+                            data.index = data.index.tz_localize('UTC')
+                        data.index = data.index.tz_convert('Asia/Kolkata')
+                        
+                        logger.info(f"Fallback method successful: {len(data)} records")
+                        return data
+                
+            except Exception as fallback_error:
+                logger.error(f"Fallback method also failed: {fallback_error}")
             
             return pd.DataFrame()
             
