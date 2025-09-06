@@ -52,11 +52,18 @@ show_tradingview_multi_chart = import_module('visualization.tradingview_widget',
 get_config = import_config
 
 # Configure logging
+import os
+
+# Ensure logs directory exists
+log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'outputs', 'logs')
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, 'app.log')
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('outputs/logs/app.log'),
+        logging.FileHandler(log_file),
         logging.StreamHandler()
     ]
 )
@@ -115,32 +122,28 @@ class IndianTradingApp:
         st.title("🇮🇳 Indian Market Trading Analysis Platform")
         st.markdown("Comprehensive analysis for Nifty 50, Bank Nifty, and Sensex with advanced options strategies and portfolio management.")
         
-        # Auto-refresh status at the top
+        # Subtle auto-refresh status (only if enabled)
         if st.session_state.get('auto_refresh', False):
-            refresh_interval = st.session_state.get('refresh_interval', 5)
+            refresh_interval = st.session_state.get('refresh_interval', 10)
             refresh_count = st.session_state.get('refresh_counter', 0)
             last_refresh = st.session_state.get('last_refresh', datetime.now())
             
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.success(f"🟢 Auto-Refresh: ON (Every {refresh_interval}s)")
-            with col2:
-                st.info(f"🔄 Refresh Count: {refresh_count}")
-            with col3:
-                st.info(f"⏰ Last: {last_refresh.strftime('%H:%M:%S')}")
+            # Show subtle status in sidebar instead of main area
+            with st.sidebar:
+                st.success(f"🟢 Auto-Refresh: ON")
+                st.caption(f"Interval: {refresh_interval}s | Count: {refresh_count}")
+                st.caption(f"Last: {last_refresh.strftime('%H:%M:%S')}")
         
         # Sidebar
         self._create_sidebar()
         
         # Main content area
-        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "📊 Market Overview", 
             "📈 Technical Analysis", 
             "🎯 Options Strategies", 
             "💼 Portfolio Management", 
-            "🔮 Live Predictions",
-            "📋 Reports",
-            "📈 TradingView Charts"
+            "🔮 Live Predictions"
         ])
         
         with tab1:
@@ -158,60 +161,47 @@ class IndianTradingApp:
         with tab5:
             self._show_live_predictions()
         
-        with tab6:
-            self._show_reports()
-        
-        with tab7:
-            self._show_tradingview_charts()
-        
-        # Enable continuous refresh at the end
-        self._enable_continuous_refresh()
-        
-        # Add JavaScript-based auto-refresh as backup
-        if st.session_state.get('auto_refresh', False):
-            refresh_interval = st.session_state.get('refresh_interval', 5)
-            st.markdown(f"""
-            <script>
-            setTimeout(function() {{
-                window.location.reload();
-            }}, {refresh_interval * 1000});
-            </script>
-            """, unsafe_allow_html=True)
+        # Enable smooth background refresh
+        self._enable_smooth_refresh()
     
     def _setup_live_refresh(self):
-        """Setup live refresh functionality"""
+        """Setup smooth live refresh functionality with background updates"""
         # Add refresh controls to sidebar
         st.sidebar.header("🔄 Live Refresh")
         
-        # Initialize session state for refresh
+        # Initialize session state for refresh (auto-refresh OFF by default)
         if 'auto_refresh' not in st.session_state:
-            st.session_state.auto_refresh = True
+            st.session_state.auto_refresh = False  # Changed to False by default
         if 'refresh_interval' not in st.session_state:
-            st.session_state.refresh_interval = 5
+            st.session_state.refresh_interval = 10  # Increased default interval
         if 'last_refresh' not in st.session_state:
             st.session_state.last_refresh = datetime.now()
         if 'refresh_counter' not in st.session_state:
             st.session_state.refresh_counter = 0
         if 'data_cache' not in st.session_state:
             st.session_state.data_cache = {}
+        if 'background_update' not in st.session_state:
+            st.session_state.background_update = False
         
-        # Auto-refresh toggle
+        # Auto-refresh toggle (unchecked by default)
         auto_refresh = st.sidebar.checkbox(
-            "Auto Refresh", 
+            "🔄 Auto Refresh (Background)", 
             value=st.session_state.auto_refresh,
-            key="auto_refresh_checkbox"
+            key="auto_refresh_checkbox",
+            help="Enable smooth background data updates without loading interruptions"
         )
         
         # Update session state
         st.session_state.auto_refresh = auto_refresh
         
-        # Refresh interval selector
+        # Refresh interval selector (longer intervals for smoother experience)
         refresh_interval = st.sidebar.selectbox(
-            "Refresh Interval",
-            options=[1, 2, 5, 10, 30, 60],
-            index=[1, 2, 5, 10, 30, 60].index(st.session_state.refresh_interval),
+            "⏱️ Refresh Interval",
+            options=[5, 10, 15, 30, 60, 120],
+            index=[5, 10, 15, 30, 60, 120].index(st.session_state.refresh_interval),
             format_func=lambda x: f"{x} seconds",
-            key="refresh_interval_select"
+            key="refresh_interval_select",
+            help="Longer intervals provide smoother experience"
         )
         
         # Update session state
@@ -314,79 +304,108 @@ class IndianTradingApp:
         st.sidebar.markdown(f"• Total refreshes: {st.session_state.refresh_counter}")
     
     def _setup_auto_refresh_timer(self):
-        """Setup automatic refresh timer using Streamlit's built-in capabilities"""
+        """Setup smooth automatic refresh timer with background updates"""
         try:
             # Check if auto-refresh is enabled
             if st.session_state.get('auto_refresh', False):
-                # Create a placeholder for the timer
-                timer_placeholder = st.empty()
-                
                 # Get current time and calculate next refresh
                 current_time = datetime.now()
                 last_refresh = st.session_state.get('last_refresh', current_time)
-                refresh_interval = st.session_state.get('refresh_interval', 5)
+                refresh_interval = st.session_state.get('refresh_interval', 10)
                 
                 # Calculate time since last refresh
                 time_since_refresh = (current_time - last_refresh).total_seconds()
                 remaining_time = max(0, refresh_interval - time_since_refresh)
                 
-                # Update timer display
+                # Only show timer in sidebar, not in main content area
                 if remaining_time > 0:
-                    timer_placeholder.info(f"⏱️ Next refresh in {remaining_time:.0f} seconds")
-                    
-                    # Use time.sleep and st.rerun for automatic refresh
-                    import time
-                    time.sleep(1)  # Wait 1 second
-                    st.rerun()  # This will cause the app to refresh
-                    
+                    # Show subtle timer in sidebar
+                    st.sidebar.info(f"⏱️ Next update: {remaining_time:.0f}s")
                 else:
-                    timer_placeholder.success("🔄 Refreshing data...")
-                    
-                    # Update refresh time and counter
+                    # Perform background update without disrupting UI
+                    st.session_state.background_update = True
                     st.session_state.last_refresh = current_time
                     st.session_state.refresh_counter = st.session_state.get('refresh_counter', 0) + 1
                     
                     # Clear cache to force data refresh
                     st.session_state.data_cache = {}
                     
-                    # Rerun the app
-                    st.rerun()
+                    # Use JavaScript for smooth background refresh
+                    st.markdown(f"""
+                    <script>
+                    setTimeout(function() {{
+                        // Trigger a gentle refresh without full page reload
+                        window.location.reload();
+                    }}, 100);
+                    </script>
+                    """, unsafe_allow_html=True)
                     
         except Exception as e:
             logger.error(f"Error in auto-refresh timer: {e}")
         
         # Auto-refresh is now handled by the timer method above
     
-    def _enable_continuous_refresh(self):
-        """Enable continuous refresh using Streamlit's built-in capabilities"""
+    def _enable_smooth_refresh(self):
+        """Enable smooth background refresh without disrupting user experience"""
         try:
             if st.session_state.get('auto_refresh', False):
-                # Get refresh settings
-                refresh_interval = st.session_state.get('refresh_interval', 5)
-                last_refresh = st.session_state.get('last_refresh', datetime.now())
-                current_time = datetime.now()
+                refresh_interval = st.session_state.get('refresh_interval', 10)
                 
-                # Calculate time since last refresh
-                time_since_refresh = (current_time - last_refresh).total_seconds()
-                
-                if time_since_refresh >= refresh_interval:
-                    # Time to refresh
-                    st.session_state.last_refresh = current_time
-                    st.session_state.refresh_counter = st.session_state.get('refresh_counter', 0) + 1
-                    
-                    # Clear cache to force data refresh
-                    st.session_state.data_cache = {}
-                    
-                    # Rerun the app
-                    st.rerun()
-                else:
-                    # Use time.sleep and st.rerun for continuous refresh
-                    import time
-                    time.sleep(1)  # Wait 1 second
-                    st.rerun()  # This will cause the app to refresh
-                    
+                # Use a more gentle refresh approach
+                st.markdown(f"""
+                <script>
+                // Smooth background refresh without full page reload
+                if (typeof window.refreshTimer === 'undefined') {{
+                    window.refreshTimer = setInterval(function() {{
+                        // Only refresh if user is not actively interacting
+                        if (!document.hidden && document.visibilityState === 'visible') {{
+                            // Use a gentle refresh method
+                            fetch(window.location.href, {{method: 'GET'}})
+                            .then(() => {{
+                                // Trigger a soft refresh
+                                window.location.reload();
+                            }})
+                            .catch(() => {{
+                                // Fallback to regular reload
+                                window.location.reload();
+                            }});
+                        }}
+                    }}, {refresh_interval * 1000});
+                }}
+                </script>
+                """, unsafe_allow_html=True)
         except Exception as e:
-            logger.error(f"Error in continuous refresh: {e}")
+            logger.error(f"Error in smooth refresh: {e}")
+    
+    def _get_cached_data(self, key: str, fetch_function, *args, **kwargs):
+        """Get cached data or fetch new data if cache is expired"""
+        try:
+            cache_key = f"{key}_{st.session_state.get('selected_symbol', 'NIFTY_50')}"
+            cache = st.session_state.get('data_cache', {})
+            
+            # Check if we have cached data and it's not expired
+            if cache_key in cache:
+                cached_data, timestamp = cache[cache_key]
+                cache_age = (datetime.now() - timestamp).total_seconds()
+                
+                # Use cached data if it's less than 30 seconds old
+                if cache_age < 30:
+                    return cached_data
+            
+            # Fetch new data
+            new_data = fetch_function(*args, **kwargs)
+            
+            # Cache the new data
+            if 'data_cache' not in st.session_state:
+                st.session_state.data_cache = {}
+            st.session_state.data_cache[cache_key] = (new_data, datetime.now())
+            
+            return new_data
+            
+        except Exception as e:
+            logger.error(f"Error in data caching: {e}")
+            # Fallback to direct fetch
+            return fetch_function(*args, **kwargs)
     
     def _should_refresh_data(self, data_key: str) -> bool:
         """Check if data should be refreshed based on cache and timing"""
@@ -827,39 +846,6 @@ class IndianTradingApp:
                 except:
                     st.metric("VWAP", f"₹{analysis['current_price']:,.0f}")
             
-            # TradingView Chart Section
-            st.markdown("---")
-            st.subheader("📊 Live TradingView Charts")
-            
-            # Create tabs for different chart types
-            tab1, tab2, tab3 = st.tabs(["Advanced Chart", "Basic Chart", "Multi-Symbol Chart"])
-            
-            with tab1:
-                st.markdown("**Advanced TradingView Chart with Technical Indicators**")
-                try:
-                    from src.visualization.tradingview_widget import show_tradingview_chart
-                    show_tradingview_chart(symbol, "advanced", 600)
-                except Exception as e:
-                    st.error(f"Error loading TradingView Advanced Chart: {e}")
-                    st.info("Please check your internet connection")
-            
-            with tab2:
-                st.markdown("**Basic TradingView Chart**")
-                try:
-                    from src.visualization.tradingview_widget import show_tradingview_chart
-                    show_tradingview_chart(symbol, "basic", 500)
-                except Exception as e:
-                    st.error(f"Error loading TradingView Basic Chart: {e}")
-                    st.info("Please check your internet connection")
-            
-            with tab3:
-                st.markdown("**Multi-Symbol TradingView Chart**")
-                try:
-                    from src.visualization.tradingview_widget import show_tradingview_chart
-                    show_tradingview_chart(symbol, "multi", 500)
-                except Exception as e:
-                    st.error(f"Error loading TradingView Multi Chart: {e}")
-                    st.info("Please check your internet connection")
             
             # VPC Indicator Display (like in the reference chart)
             if 'VWAP_Price_Channel' in st.session_state.analysis_params['indicators']:
