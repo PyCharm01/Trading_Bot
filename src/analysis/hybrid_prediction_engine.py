@@ -31,11 +31,18 @@ try:
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LinearRegression
     from sklearn.svm import SVR
-    import xgboost as xgb
     ML_AVAILABLE = True
 except ImportError:
     ML_AVAILABLE = False
-    logging.warning("ML libraries not available. Using statistical methods only.")
+    logging.warning("scikit-learn not available. Using statistical methods only.")
+
+# Try to import XGBoost separately
+try:
+    import xgboost as xgb
+    XGBOOST_AVAILABLE = True
+except ImportError:
+    XGBOOST_AVAILABLE = False
+    logging.warning("XGBoost not available. Will use other ML models.")
 
 logger = logging.getLogger(__name__)
 
@@ -228,12 +235,19 @@ class HybridPredictionEngine:
                 )
                 
                 # Train ensemble of models
-                models = {
-                    'xgboost': xgb.XGBRegressor(n_estimators=100, random_state=42),
-                    'gradient_boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
-                    'random_forest': RandomForestRegressor(n_estimators=100, random_state=42),
-                    'svr': SVR(kernel='rbf', C=1.0)
-                }
+                models = {}
+                
+                if XGBOOST_AVAILABLE:
+                    models['xgboost'] = xgb.XGBRegressor(n_estimators=100, random_state=42)
+                
+                if ML_AVAILABLE:
+                    models['gradient_boosting'] = GradientBoostingRegressor(n_estimators=100, random_state=42)
+                    models['random_forest'] = RandomForestRegressor(n_estimators=100, random_state=42)
+                    models['svr'] = SVR(kernel='rbf', C=1.0)
+                
+                if not models:
+                    logger.warning("No ML models available, using statistical methods only")
+                    return None
                 
                 best_model = None
                 best_score = float('inf')
