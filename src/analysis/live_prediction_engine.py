@@ -14,6 +14,9 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import warnings
+import pickle
+import os
+import json
 warnings.filterwarnings('ignore')
 
 # Try to import ML libraries
@@ -111,6 +114,129 @@ class LivePredictionEngine:
         self.last_training_time = None
         self.training_interval = timedelta(hours=1)  # Retrain every hour
         self.min_training_samples = 200  # Minimum samples for training
+        
+        # Model persistence
+        self.models_dir = "outputs/models"
+        self.model_file_prefix = f"live_prediction_{symbol.lower()}"
+        self._ensure_models_directory()
+        
+        # Try to load existing models
+        self._load_saved_models()
+    
+    def _ensure_models_directory(self):
+        """Ensure the models directory exists"""
+        try:
+            os.makedirs(self.models_dir, exist_ok=True)
+            logger.info(f"Models directory ensured: {self.models_dir}")
+        except Exception as e:
+            logger.error(f"Error creating models directory: {e}")
+    
+    def _load_saved_models(self):
+        """Load saved models from pickle files"""
+        try:
+            model_files = {
+                '1m': f"{self.model_file_prefix}_1m.pkl",
+                '2m': f"{self.model_file_prefix}_2m.pkl", 
+                '5m': f"{self.model_file_prefix}_5m.pkl",
+                '10m': f"{self.model_file_prefix}_10m.pkl",
+                'scaler': f"{self.model_file_prefix}_scaler.pkl",
+                'metadata': f"{self.model_file_prefix}_metadata.json"
+            }
+            
+            models_loaded = 0
+            
+            # Load scaler
+            scaler_path = os.path.join(self.models_dir, model_files['scaler'])
+            if os.path.exists(scaler_path):
+                with open(scaler_path, 'rb') as f:
+                    self.scaler = pickle.load(f)
+                models_loaded += 1
+                logger.info("Loaded saved scaler")
+            
+            # Load models
+            for timeframe, model_name in [('1m', 'model_1m'), ('2m', 'model_2m'), 
+                                        ('5m', 'model_5m'), ('10m', 'model_10m')]:
+                model_path = os.path.join(self.models_dir, model_files[timeframe])
+                if os.path.exists(model_path):
+                    with open(model_path, 'rb') as f:
+                        setattr(self, model_name, pickle.load(f))
+                    models_loaded += 1
+                    logger.info(f"Loaded saved {timeframe} model")
+            
+            # Load metadata
+            metadata_path = os.path.join(self.models_dir, model_files['metadata'])
+            if os.path.exists(metadata_path):
+                with open(metadata_path, 'r') as f:
+                    metadata = json.load(f)
+                    self.feature_columns = metadata.get('feature_columns', [])
+                    self.last_training_time = datetime.fromisoformat(metadata.get('last_training_time', datetime.now().isoformat()))
+                    self.is_trained = metadata.get('is_trained', False)
+                models_loaded += 1
+                logger.info("Loaded saved metadata")
+            
+            if models_loaded > 0:
+                logger.info(f"Successfully loaded {models_loaded} saved model components")
+                self.is_trained = True
+            else:
+                logger.info("No saved models found, will train new models")
+                
+        except Exception as e:
+            logger.error(f"Error loading saved models: {e}")
+            self.is_trained = False
+    
+    def _save_models(self):
+        """Save trained models to pickle files"""
+        try:
+            if not self.is_trained:
+                logger.warning("No trained models to save")
+                return False
+            
+            model_files = {
+                '1m': f"{self.model_file_prefix}_1m.pkl",
+                '2m': f"{self.model_file_prefix}_2m.pkl",
+                '5m': f"{self.model_file_prefix}_5m.pkl", 
+                '10m': f"{self.model_file_prefix}_10m.pkl",
+                'scaler': f"{self.model_file_prefix}_scaler.pkl",
+                'metadata': f"{self.model_file_prefix}_metadata.json"
+            }
+            
+            # Save scaler
+            if self.scaler:
+                scaler_path = os.path.join(self.models_dir, model_files['scaler'])
+                with open(scaler_path, 'wb') as f:
+                    pickle.dump(self.scaler, f)
+                logger.info("Saved scaler")
+            
+            # Save models
+            for timeframe, model_name in [('1m', 'model_1m'), ('2m', 'model_2m'),
+                                        ('5m', 'model_5m'), ('10m', 'model_10m')]:
+                model = getattr(self, model_name)
+                if model:
+                    model_path = os.path.join(self.models_dir, model_files[timeframe])
+                    with open(model_path, 'wb') as f:
+                        pickle.dump(model, f)
+                    logger.info(f"Saved {timeframe} model")
+            
+            # Save metadata
+            metadata = {
+                'feature_columns': self.feature_columns,
+                'last_training_time': self.last_training_time.isoformat(),
+                'is_trained': self.is_trained,
+                'symbol': self.symbol,
+                'training_samples': len(self.feature_columns) if self.feature_columns else 0
+            }
+            
+            metadata_path = os.path.join(self.models_dir, model_files['metadata'])
+            with open(metadata_path, 'w') as f:
+                json.dump(metadata, f, indent=2)
+            logger.info("Saved metadata")
+            
+            logger.info("All models saved successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving models: {e}")
+            return False
         
     def _calculate_technical_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate technical indicators for prediction features"""
@@ -286,6 +412,14 @@ class LivePredictionEngine:
             self.is_trained = True
             self.last_training_time = datetime.now()
             logger.info(f"Models trained successfully with {len(features)} live samples")
+            
+            # Save trained models to pickle files
+            save_success = self._save_models()
+            if save_success:
+                logger.info("Models saved to pickle files successfully")
+            else:
+                logger.warning("Failed to save models to pickle files")
+            
             return True
             
         except Exception as e:
@@ -883,6 +1017,75 @@ class LivePredictionEngine:
         except Exception as e:
             logger.error(f"Error generating sell reasoning: {e}")
             return f"SELL signal with {prediction.confidence_5m:.1%} confidence"
+    
+    def should_retrain_models(self) -> bool:
+        """Check if models should be retrained based on time and data freshness"""
+        try:
+            if not self.is_trained or not self.last_training_time:
+                return True
+            
+            # Check if enough time has passed since last training
+            time_since_training = datetime.now() - self.last_training_time
+            if time_since_training > self.training_interval:
+                logger.info(f"Models need retraining - {time_since_training} since last training")
+                return True
+            
+            # Check if we have enough new data
+            try:
+                recent_data = self.fetch_live_training_data()
+                if len(recent_data) < self.min_training_samples:
+                    logger.info("Not enough data for retraining")
+                    return False
+                
+                # Check data freshness (last data point should be recent)
+                if not recent_data.empty:
+                    last_data_time = recent_data.index[-1]
+                    time_since_last_data = datetime.now(recent_data.index.tz) - last_data_time
+                    if time_since_last_data > timedelta(hours=2):
+                        logger.info("Data is stale, retraining needed")
+                        return True
+                
+            except Exception as e:
+                logger.warning(f"Error checking data freshness: {e}")
+                return False
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error checking retrain condition: {e}")
+            return True
+    
+    def train_models_with_live_data(self, force_retrain: bool = False) -> bool:
+        """Train models using live data from Yahoo Finance and Upstox"""
+        try:
+            # Check if retraining is needed
+            if not force_retrain and not self.should_retrain_models():
+                logger.info("Models are up to date, no retraining needed")
+                return True
+            
+            logger.info("Starting model training with live data...")
+            
+            # Fetch live training data
+            data = self.fetch_live_training_data()
+            if data.empty:
+                logger.error("No live data available for training")
+                return False
+            
+            logger.info(f"Fetched {len(data)} live data points for training")
+            
+            # Train models
+            training_success = self.train_models(data)
+            
+            if training_success:
+                logger.info("✅ Model training completed successfully with live data")
+                return True
+            else:
+                logger.error("❌ Model training failed")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error in live data training: {e}")
+            return False
     
     def get_prediction_accuracy(self) -> Dict[str, float]:
         """Calculate prediction accuracy from live prediction history"""
