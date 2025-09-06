@@ -391,7 +391,7 @@ class LLMSentimentAnalyzer:
             async with aiohttp.ClientSession() as session:
                 payload = {
                     "model": "llama2",
-                    "prompt": f"""
+                    "prompt": f'''
                     Analyze the sentiment of this financial news text and provide a structured response:
                     
                     Text: "{text}"
@@ -412,6 +412,7 @@ class LLMSentimentAnalyzer:
                         "keywords": ["string"],
                         "market_impact": "string"
                     }}
+                    '''
                     ,
                     "stream": False
                 }
@@ -457,7 +458,7 @@ class LLMSentimentAnalyzer:
         try:
             payload = {
                 "model": "llama2",
-                "prompt": f"""
+                "prompt": f'''
                 Analyze the sentiment of this financial news text and provide a structured response:
                 
                 Text: "{text}"
@@ -478,7 +479,7 @@ class LLMSentimentAnalyzer:
                     "keywords": ["string"],
                     "market_impact": "string"
                 }}
-                """,
+                ''',
                 "stream": False
             }
             
@@ -763,3 +764,4 @@ if __name__ == "__main__":
     print(f"Risk Level: {market_sentiment.risk_level}")
     print(f"Confidence: {market_sentiment.confidence:.2f}")
     print(f"Key Events: {market_sentiment.key_events}")
+
