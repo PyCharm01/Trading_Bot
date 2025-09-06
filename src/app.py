@@ -36,6 +36,16 @@ INDIAN_MARKET_SYMBOLS = import_module('data.indian_market_data', 'INDIAN_MARKET_
 IndianMarketAnalyzer = import_module('analysis.indian_technical_analysis', 'IndianMarketAnalyzer')
 IndianBacktestingEngine = import_module('analysis.indian_backtesting', 'IndianBacktestingEngine')
 BacktestConfig = import_module('analysis.indian_backtesting', 'BacktestConfig')
+
+# Import new optimal prediction modules
+Optimized1MDataFetcher = import_module('data.optimized_1m_data_fetcher', 'Optimized1MDataFetcher')
+LLMSentimentAnalyzer = import_module('analysis.llm_sentiment_analyzer', 'LLMSentimentAnalyzer')
+HybridPredictionEngine = import_module('analysis.hybrid_prediction_engine', 'HybridPredictionEngine')
+OptimalPredictionSystem = import_module('analysis.optimal_prediction_system', 'OptimalPredictionSystem')
+OptimalPredictionConfig = import_module('analysis.optimal_prediction_system', 'OptimalPredictionConfig')
+HybridPredictionResult = import_module('analysis.hybrid_prediction_engine', 'HybridPredictionResult')
+
+# Keep old modules for backward compatibility
 LivePredictionEngine = import_module('analysis.live_prediction_engine', 'LivePredictionEngine')
 PredictionResult = import_module('analysis.live_prediction_engine', 'PredictionResult')
 MarketEntrySignal = import_module('analysis.live_prediction_engine', 'MarketEntrySignal')
@@ -82,7 +92,10 @@ class IndianTradingApp:
         self.technical_analyzer = IndianMarketAnalyzer()
         self.options_engine = IndianOptionsStrategyEngine()
         self.visualizer = IndianMarketVisualizer()
-        self.prediction_engine = LivePredictionEngine()
+        
+        # Initialize prediction engines
+        self.prediction_engine = LivePredictionEngine()  # Legacy engine
+        self.optimal_prediction_system = None  # Will be initialized when needed
         
         # Initialize session state
         self._initialize_session_state()
@@ -102,6 +115,48 @@ class IndianTradingApp:
                 'show_volume': True,
                 'show_support_resistance': True
             }
+        
+        if 'optimal_prediction_system' not in st.session_state:
+            st.session_state.optimal_prediction_system = None
+        
+        if 'use_optimal_prediction' not in st.session_state:
+            st.session_state.use_optimal_prediction = False
+    
+    def _initialize_optimal_prediction_system(self, symbol: str = "NIFTY_50"):
+        """Initialize the optimal prediction system"""
+        try:
+            if st.session_state.optimal_prediction_system is None:
+                with st.spinner("Initializing Optimal Prediction System..."):
+                    config = OptimalPredictionConfig(
+                        symbol=symbol,
+                        data_days=30,
+                        use_ml_models=True,
+                        use_sentiment_analysis=True,
+                        use_llm_analysis=True,
+                        mcp_server_enabled=False  # Disable MCP server in Streamlit
+                    )
+                    
+                    st.session_state.optimal_prediction_system = OptimalPredictionSystem(config)
+                    
+                    # Initialize the system
+                    import asyncio
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    success = loop.run_until_complete(
+                        st.session_state.optimal_prediction_system.initialize_system()
+                    )
+                    loop.close()
+                    
+                    if success:
+                        st.success("✅ Optimal Prediction System initialized successfully!")
+                        return True
+                    else:
+                        st.error("❌ Failed to initialize Optimal Prediction System")
+                        return False
+            return True
+        except Exception as e:
+            st.error(f"Error initializing optimal prediction system: {e}")
+            return False
     
     def run(self):
         """Run the main application"""
@@ -138,12 +193,13 @@ class IndianTradingApp:
         self._create_sidebar()
         
         # Main content area
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
             "📊 Market Overview", 
             "📈 Technical Analysis", 
             "🎯 Options Strategies", 
             "💼 Portfolio Management", 
-            "🔮 Live Predictions"
+            "🔮 Live Predictions",
+            "🚀 Optimal Predictions"
         ])
         
         with tab1:
@@ -160,6 +216,9 @@ class IndianTradingApp:
         
         with tab5:
             self._show_live_predictions()
+        
+        with tab6:
+            self._show_optimal_predictions()
         
         # Enable smooth background refresh
         self._enable_smooth_refresh()
@@ -488,6 +547,19 @@ class IndianTradingApp:
             'show_support_resistance': show_support_resistance,
             'show_vwap_channel': show_vwap_channel
         })
+        
+        # Optimal Prediction System settings
+        st.sidebar.subheader("🚀 Optimal Prediction System")
+        use_optimal_prediction = st.sidebar.checkbox("Enable Optimal Prediction", value=False)
+        st.session_state.use_optimal_prediction = use_optimal_prediction
+        
+        if use_optimal_prediction:
+            st.sidebar.info("🎯 Using Hybrid ML + LLM + Sentiment Analysis")
+            if st.sidebar.button("Initialize System"):
+                symbol = st.session_state.selected_symbol
+                self._initialize_optimal_prediction_system(symbol)
+        else:
+            st.sidebar.info("📊 Using Traditional Technical Analysis")
         
         # Options analysis settings
         st.sidebar.subheader("🎯 Options Analysis")
@@ -1684,6 +1756,130 @@ class IndianTradingApp:
         except Exception as e:
             st.error(f"Error in portfolio management: {e}")
             logger.error(f"Error in portfolio management: {e}")
+    
+    def _show_optimal_predictions(self):
+        """Show optimal predictions using hybrid system"""
+        st.header("🚀 Optimal Predictions (ML + LLM + Sentiment)")
+        
+        if st.session_state.optimal_prediction_system is None:
+            st.warning("⚠️ Optimal Prediction System not initialized. Please initialize it from the sidebar.")
+            return
+        
+        try:
+            with st.spinner("Getting optimal prediction..."):
+                prediction = st.session_state.optimal_prediction_system.get_optimal_prediction()
+            
+            # Display prediction results
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric(
+                    "Current Price",
+                    f"₹{prediction.current_price:,.2f}",
+                    delta=f"{prediction.sentiment_score:.2f} sentiment"
+                )
+            
+            with col2:
+                st.metric(
+                    "1m Prediction",
+                    f"₹{prediction.predicted_price_1m:,.2f}",
+                    delta=f"{prediction.confidence_1m:.1%} confidence"
+                )
+            
+            with col3:
+                st.metric(
+                    "5m Prediction",
+                    f"₹{prediction.predicted_price_5m:,.2f}",
+                    delta=f"{prediction.confidence_5m:.1%} confidence"
+                )
+            
+            # Signal analysis
+            st.subheader("📊 Signal Analysis")
+            
+            signal_col1, signal_col2, signal_col3 = st.columns(3)
+            
+            with signal_col1:
+                if prediction.technical_signal == "BUY":
+                    st.success(f"🔵 Technical: {prediction.technical_signal}")
+                elif prediction.technical_signal == "SELL":
+                    st.error(f"🔴 Technical: {prediction.technical_signal}")
+                else:
+                    st.info(f"🟡 Technical: {prediction.technical_signal}")
+            
+            with signal_col2:
+                if prediction.sentiment_signal == "BUY":
+                    st.success(f"🔵 Sentiment: {prediction.sentiment_signal}")
+                elif prediction.sentiment_signal == "SELL":
+                    st.error(f"🔴 Sentiment: {prediction.sentiment_signal}")
+                else:
+                    st.info(f"🟡 Sentiment: {prediction.sentiment_signal}")
+            
+            with signal_col3:
+                if prediction.combined_signal == "BUY":
+                    st.success(f"🔵 Combined: {prediction.combined_signal}")
+                elif prediction.combined_signal == "SELL":
+                    st.error(f"🔴 Combined: {prediction.combined_signal}")
+                else:
+                    st.info(f"🟡 Combined: {prediction.combined_signal}")
+            
+            # Risk assessment
+            st.subheader("⚠️ Risk Assessment")
+            
+            if prediction.risk_level == "HIGH":
+                st.error(f"🔴 Risk Level: {prediction.risk_level}")
+            elif prediction.risk_level == "MEDIUM":
+                st.warning(f"🟡 Risk Level: {prediction.risk_level}")
+            else:
+                st.success(f"🟢 Risk Level: {prediction.risk_level}")
+            
+            # Detailed predictions
+            st.subheader("📈 Detailed Predictions")
+            
+            pred_col1, pred_col2, pred_col3 = st.columns(3)
+            
+            with pred_col1:
+                st.metric(
+                    "1m Target",
+                    f"₹{prediction.predicted_price_1m:,.2f}",
+                    f"Confidence: {prediction.confidence_1m:.1%}"
+                )
+            
+            with pred_col2:
+                st.metric(
+                    "5m Target",
+                    f"₹{prediction.predicted_price_5m:,.2f}",
+                    f"Confidence: {prediction.confidence_5m:.1%}"
+                )
+            
+            with pred_col3:
+                st.metric(
+                    "10m Target",
+                    f"₹{prediction.predicted_price_10m:,.2f}",
+                    f"Confidence: {prediction.confidence_10m:.1%}"
+                )
+            
+            # Reasoning
+            st.subheader("🧠 AI Reasoning")
+            st.info(prediction.reasoning)
+            
+            # System status
+            st.subheader("🔧 System Status")
+            status = st.session_state.optimal_prediction_system.get_system_status()
+            
+            status_col1, status_col2, status_col3 = st.columns(3)
+            
+            with status_col1:
+                st.metric("Data Quality", f"{status['data_quality']['score']:.1%}")
+            
+            with status_col2:
+                st.metric("ML Models", f"{status['models']['ml_models_trained']}")
+            
+            with status_col3:
+                st.metric("Prediction Latency", f"{status['performance']['prediction_latency_ms']:.1f}ms")
+            
+        except Exception as e:
+            st.error(f"Error getting optimal prediction: {e}")
+            logger.error(f"Error in optimal predictions: {e}")
     
     def _show_live_predictions(self):
         """Show live predictions for market entry"""
