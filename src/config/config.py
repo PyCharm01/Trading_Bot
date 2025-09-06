@@ -96,7 +96,7 @@ class AppConfig:
     NSE_API_KEY: str = "your_nse_api_key_here"
     BSE_API_KEY: str = "your_bse_api_key_here"
     ZERODHA_API_KEY: str = "your_zerodha_api_key_here"
-    UPSTOX_API_KEY: str = "your_upstox_api_key_here"
+    UPSTOX_API_KEY: str = "94317211-0e61-4fb7-bea6-24040477543c"
     FINNHUB_API_KEY: str = "d2tbtf9r01qkuv3k7mu0d2tbtf9r01qkuv3k7mug"
     POLYGON_API_KEY: str = "TwMlzxH1FcQE9jzqvLbspp0uDZoU6L0Q"
     
