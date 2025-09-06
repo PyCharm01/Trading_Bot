@@ -78,7 +78,8 @@ class ModelPerformance:
     mae: float
     training_time: float
     prediction_time: float
-
+    
+@dataclass
 class HybridPredictionEngine:
     """Hybrid prediction engine combining ML, LLM, and sentiment analysis"""
     
@@ -667,3 +668,4 @@ if __name__ == "__main__":
         print(f"   Reasoning: {prediction.reasoning}")
     else:
         print("❌ Model training failed")
+
