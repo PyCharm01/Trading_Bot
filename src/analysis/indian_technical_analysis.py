@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Indian Market Technical Analysis
+Indian Market Technical Analysis with TradingView Integration
 
 This module provides comprehensive technical analysis specifically designed for
 Indian market indices including Nifty 50, Bank Nifty, and Sensex with
-market-specific indicators and analysis methods.
+market-specific indicators, analysis methods, and TradingView chart integration.
 """
 
 import pandas as pd
@@ -14,6 +14,27 @@ from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 import talib
 from dataclasses import dataclass
+
+# Import TradingView widget for chart integration
+try:
+    from ..visualization.tradingview_widget import TradingViewWidget, show_tradingview_chart
+except ImportError:
+    try:
+        from visualization.tradingview_widget import TradingViewWidget, show_tradingview_chart
+    except ImportError:
+        try:
+            from src.visualization.tradingview_widget import TradingViewWidget, show_tradingview_chart
+        except ImportError:
+            # Fallback - create dummy functions
+            class TradingViewWidget:
+                def __init__(self):
+                    pass
+                def create_tradingview_chart(self, symbol, height=600, theme="dark"):
+                    return f"<div>TradingView chart for {symbol} (widget not available)</div>"
+            
+            def show_tradingview_chart(symbol, chart_type="basic", height=600):
+                import streamlit as st
+                st.write(f"TradingView chart for {symbol} (widget not available)")
 
 logger = logging.getLogger(__name__)
 
@@ -241,11 +262,12 @@ class IndianTechnicalIndicators:
         return adx, plus_di, minus_di
 
 class IndianMarketAnalyzer:
-    """Comprehensive technical analysis for Indian market indices"""
+    """Comprehensive technical analysis for Indian market indices with TradingView integration"""
     
     def __init__(self):
         self.indicators = IndianTechnicalIndicators()
         self.analysis_cache = {}
+        self.tradingview_widget = TradingViewWidget()
     
     def analyze_index(self, data: pd.DataFrame, index_name: str) -> Dict[str, Any]:
         """Perform comprehensive technical analysis for Indian market index"""
@@ -603,6 +625,107 @@ class IndianMarketAnalyzer:
             summary += "Recommendation: Wait for clearer signals or use range-bound strategies"
         
         return summary
+    
+    def create_tradingview_chart(self, symbol: str, chart_type: str = "advanced", height: int = 600, theme: str = "dark") -> str:
+        """
+        Create TradingView chart for technical analysis
+        
+        Args:
+            symbol: Trading symbol (e.g., 'NIFTY_50')
+            chart_type: Type of chart ('basic', 'advanced', 'multi')
+            height: Chart height in pixels
+            theme: Chart theme ('dark' or 'light')
+        
+        Returns:
+            HTML string for TradingView widget
+        """
+        try:
+            if chart_type == "advanced":
+                return self.tradingview_widget.create_advanced_chart(symbol, height=height, use_fallback=False)
+            elif chart_type == "multi":
+                return self.tradingview_widget.create_multi_symbol_chart([symbol], height)
+            else:
+                return self.tradingview_widget.create_tradingview_chart(symbol, height, theme, use_fallback=False)
+        except Exception as e:
+            logger.error(f"Error creating TradingView chart: {e}")
+            return f"<div>Error creating TradingView chart: {e}</div>"
+    
+    def create_analysis_with_charts(self, data: pd.DataFrame, index_name: str, include_charts: bool = True) -> Dict[str, Any]:
+        """
+        Perform comprehensive technical analysis with TradingView charts
+        
+        Args:
+            data: Market data DataFrame
+            index_name: Name of the index
+            include_charts: Whether to include TradingView charts
+        
+        Returns:
+            Analysis results with TradingView charts
+        """
+        try:
+            # Perform standard analysis
+            analysis = self.analyze_index(data, index_name)
+            
+            if include_charts:
+                # Add TradingView charts
+                analysis['charts'] = {
+                    'basic_chart': self.create_tradingview_chart(index_name, "basic", 400, "dark"),
+                    'advanced_chart': self.create_tradingview_chart(index_name, "advanced", 600, "dark"),
+                    'multi_chart': self.create_tradingview_chart(index_name, "multi", 500, "dark")
+                }
+                
+                # Add chart metadata
+                analysis['chart_info'] = {
+                    'symbol': index_name,
+                    'chart_types': ['basic', 'advanced', 'multi'],
+                    'theme': 'dark',
+                    'timezone': 'Asia/Kolkata',
+                    'data_source': 'TradingView'
+                }
+            
+            return analysis
+            
+        except Exception as e:
+            logger.error(f"Error in analysis with charts: {e}")
+            return {"error": str(e)}
+    
+    def get_tradingview_symbol_info(self, symbol: str) -> Dict[str, Any]:
+        """
+        Get TradingView symbol information and available chart types
+        
+        Args:
+            symbol: Trading symbol
+        
+        Returns:
+            Symbol information and available chart configurations
+        """
+        try:
+            tradingview_symbol = self.tradingview_widget._get_tradingview_symbol(symbol)
+            
+            return {
+                'internal_symbol': symbol,
+                'tradingview_symbol': tradingview_symbol,
+                'available_charts': {
+                    'basic': 'Simple price chart with basic indicators',
+                    'advanced': 'Advanced chart with RSI, MACD, and Volume',
+                    'multi': 'Multi-symbol comparison chart'
+                },
+                'chart_configs': {
+                    'themes': ['dark', 'light'],
+                    'heights': [300, 400, 500, 600, 800],
+                    'timeframes': ['1m', '5m', '15m', '1h', '1d'],
+                    'indicators': ['RSI', 'MACD', 'Volume', 'Bollinger Bands', 'Moving Averages']
+                },
+                'market_info': {
+                    'exchange': 'NSE' if 'NIFTY' in symbol else 'BSE' if 'SENSEX' in symbol else 'Unknown',
+                    'timezone': 'Asia/Kolkata',
+                    'trading_hours': '09:15 - 15:30 IST'
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting TradingView symbol info: {e}")
+            return {"error": str(e)}
 
 # Example usage and testing
 if __name__ == "__main__":
@@ -612,8 +735,15 @@ if __name__ == "__main__":
     # Create analyzer
     analyzer = IndianMarketAnalyzer()
     
-    # Test with sample data
-    print("Testing Indian Market Technical Analysis...")
+    # Test TradingView integration
+    print("Testing Indian Market Technical Analysis with TradingView Integration...")
     
-    # This would typically be called with real market data
-    print("Indian Market Technical Analysis module loaded successfully")
+    # Test symbol info
+    symbol_info = analyzer.get_tradingview_symbol_info("NIFTY_50")
+    print(f"TradingView symbol info: {symbol_info}")
+    
+    # Test chart creation
+    chart_html = analyzer.create_tradingview_chart("NIFTY_50", "advanced", 600)
+    print(f"TradingView chart created: {len(chart_html)} characters")
+    
+    print("Indian Market Technical Analysis with TradingView Integration loaded successfully")
