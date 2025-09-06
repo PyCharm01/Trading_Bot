@@ -1061,13 +1061,14 @@ class IndianTradingApp:
                 # Analyze options
                 options_analysis = self.options_engine.analyze_options_chain(options_data, current_price, symbol)
                 
-                # Get strategy recommendation
+                # Get strategy recommendation with market regime analysis
+                market_regime = self._analyze_market_regime(data, technical_analysis)
                 strategy = self.options_engine.recommend_strategy(
                     technical_analysis['overall_signal'],
                     options_analysis,
                     current_price,
                     symbol,
-                    'normal'
+                    market_regime
                 )
             
             # Display current price and lot size
@@ -1187,6 +1188,34 @@ class IndianTradingApp:
         except Exception as e:
             st.error(f"Error in options strategies: {e}")
             logger.error(f"Error in options strategies: {e}")
+    
+    def _analyze_market_regime(self, data: pd.DataFrame, technical_analysis: Dict) -> str:
+        """Analyze market regime for options strategy selection"""
+        try:
+            # Calculate volatility
+            returns = data['Close'].pct_change().dropna()
+            volatility = returns.std() * np.sqrt(252)  # Annualized volatility
+            
+            # Calculate trend strength
+            sma_20 = data['Close'].rolling(20).mean()
+            sma_50 = data['Close'].rolling(50).mean()
+            trend_strength = abs(sma_20.iloc[-1] - sma_50.iloc[-1]) / sma_50.iloc[-1]
+            
+            # Determine market regime
+            if volatility > 0.25:  # High volatility
+                if trend_strength > 0.05:  # Strong trend
+                    return 'volatile'
+                else:
+                    return 'ranging'
+            else:  # Low volatility
+                if trend_strength > 0.03:  # Moderate trend
+                    return 'trending'
+                else:
+                    return 'ranging'
+                    
+        except Exception as e:
+            logger.error(f"Error analyzing market regime: {e}")
+            return 'normal'
     
     def _get_live_market_data_safe(self, portfolio_simulator, data_fetcher):
         """Safe method to get live market data with fallback"""
