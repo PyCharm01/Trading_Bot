@@ -46,6 +46,9 @@ IndianPortfolioSimulator = import_module('portfolio.indian_portfolio_simulator',
 Position = import_module('portfolio.indian_portfolio_simulator', 'Position')
 PortfolioMetrics = import_module('portfolio.indian_portfolio_simulator', 'PortfolioMetrics')
 IndianMarketVisualizer = import_module('visualization.indian_visualization', 'IndianMarketVisualizer')
+TradingViewWidget = import_module('visualization.tradingview_widget', 'TradingViewWidget')
+show_tradingview_chart = import_module('visualization.tradingview_widget', 'show_tradingview_chart')
+show_tradingview_multi_chart = import_module('visualization.tradingview_widget', 'show_tradingview_multi_chart')
 get_config = import_config
 
 # Configure logging
@@ -130,13 +133,14 @@ class IndianTradingApp:
         self._create_sidebar()
         
         # Main content area
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
             "📊 Market Overview", 
             "📈 Technical Analysis", 
             "🎯 Options Strategies", 
             "💼 Portfolio Management", 
             "🔮 Live Predictions",
-            "📋 Reports"
+            "📋 Reports",
+            "📈 TradingView Charts"
         ])
         
         with tab1:
@@ -156,6 +160,9 @@ class IndianTradingApp:
         
         with tab6:
             self._show_reports()
+        
+        with tab7:
+            self._show_tradingview_charts()
         
         # Enable continuous refresh at the end
         self._enable_continuous_refresh()
@@ -2105,6 +2112,157 @@ class IndianTradingApp:
             except Exception as e:
                 st.error(f"Error generating reports: {e}")
                 logger.error(f"Error in reports: {e}")
+    
+    def _show_tradingview_charts(self):
+        """Show TradingView charts integration"""
+        st.header("📈 TradingView Charts")
+        
+        # Live timestamp
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
+        st.caption(f"Last updated: {current_time}")
+        
+        try:
+            # Chart type selection
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                chart_type = st.selectbox(
+                    "Select Chart Type",
+                    ["Basic Chart", "Advanced Chart", "Multi-Symbol Chart", "Comparison Chart"],
+                    help="Choose the type of TradingView chart to display"
+                )
+            
+            with col2:
+                theme = st.selectbox(
+                    "Chart Theme",
+                    ["dark", "light"],
+                    help="Select chart theme"
+                )
+            
+            # Symbol selection
+            selected_symbol = st.selectbox(
+                "Select Symbol",
+                list(INDIAN_MARKET_SYMBOLS.keys()),
+                help="Choose the trading symbol to display"
+            )
+            
+            # Chart height
+            height = st.slider("Chart Height", 400, 800, 600, help="Adjust chart height")
+            
+            st.divider()
+            
+            if chart_type == "Basic Chart":
+                st.subheader(f"📊 {INDIAN_MARKET_SYMBOLS[selected_symbol]['name']} - Basic Chart")
+                show_tradingview_chart(selected_symbol, "basic", height)
+                
+            elif chart_type == "Advanced Chart":
+                st.subheader(f"📊 {INDIAN_MARKET_SYMBOLS[selected_symbol]['name']} - Advanced Chart")
+                st.info("🔧 Advanced chart includes RSI, MACD, and Volume indicators")
+                show_tradingview_chart(selected_symbol, "advanced", height)
+                
+            elif chart_type == "Multi-Symbol Chart":
+                st.subheader("📊 Multi-Symbol Overview")
+                
+                # Allow selection of multiple symbols
+                available_symbols = list(INDIAN_MARKET_SYMBOLS.keys())
+                selected_symbols = st.multiselect(
+                    "Select Multiple Symbols",
+                    available_symbols,
+                    default=[selected_symbol],
+                    help="Choose multiple symbols to compare"
+                )
+                
+                if selected_symbols:
+                    show_tradingview_multi_chart(selected_symbols, height)
+                else:
+                    st.warning("Please select at least one symbol")
+                    
+            elif chart_type == "Comparison Chart":
+                st.subheader("📊 Symbol Comparison")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    symbol1 = st.selectbox("First Symbol", available_symbols, key="symbol1")
+                
+                with col2:
+                    symbol2 = st.selectbox("Second Symbol", available_symbols, key="symbol2")
+                
+                if symbol1 and symbol2:
+                    st.write(f"**Comparing {INDIAN_MARKET_SYMBOLS[symbol1]['name']} vs {INDIAN_MARKET_SYMBOLS[symbol2]['name']}**")
+                    
+                    # Display both charts side by side
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.write(f"**{INDIAN_MARKET_SYMBOLS[symbol1]['name']}**")
+                        show_tradingview_chart(symbol1, "basic", height)
+                    
+                    with col2:
+                        st.write(f"**{INDIAN_MARKET_SYMBOLS[symbol2]['name']}**")
+                        show_tradingview_chart(symbol2, "basic", height)
+            
+            # Chart information
+            st.divider()
+            st.subheader("ℹ️ Chart Information")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("Symbol", selected_symbol)
+                st.metric("Exchange", "NSE/BSE")
+            
+            with col2:
+                st.metric("Timezone", "Asia/Kolkata")
+                st.metric("Data Source", "TradingView")
+            
+            with col3:
+                st.metric("Chart Type", chart_type)
+                st.metric("Theme", theme.title())
+            
+            # TradingView features
+            st.subheader("🚀 TradingView Features")
+            
+            features = [
+                "✅ Real-time price data",
+                "✅ Interactive charts with zoom/pan",
+                "✅ Multiple timeframes (1m, 5m, 15m, 1h, 1d)",
+                "✅ Technical indicators (RSI, MACD, Bollinger Bands)",
+                "✅ Drawing tools and annotations",
+                "✅ Volume analysis",
+                "✅ Candlestick patterns",
+                "✅ Mobile responsive design"
+            ]
+            
+            for feature in features:
+                st.write(feature)
+            
+            # Auto-refresh option
+            st.divider()
+            col1, col2 = st.columns([3, 1])
+            
+            with col1:
+                st.write("**🔄 Auto-refresh:** Charts automatically update with live market data")
+            
+            with col2:
+                if st.button("🔄 Refresh Charts", help="Manually refresh all charts"):
+                    st.rerun()
+            
+        except Exception as e:
+            st.error(f"Error loading TradingView charts: {e}")
+            logger.error(f"Error in TradingView charts: {e}")
+            
+            # Fallback message
+            st.info("""
+            **TradingView Integration Notes:**
+            
+            - Charts are loaded from TradingView's official widget
+            - Requires internet connection for real-time data
+            - Charts may take a few seconds to load initially
+            - All data is provided by TradingView, not stored locally
+            
+            If charts don't load, please check your internet connection and try refreshing the page.
+            """)
     
     def _create_excel_report(self, report_data: Dict, market_data: pd.DataFrame) -> pd.DataFrame:
         """Create Excel report with multiple sheets"""
