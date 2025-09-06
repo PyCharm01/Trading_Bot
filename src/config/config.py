@@ -86,7 +86,7 @@ class AppConfig:
     # API Keys (Direct configuration - no environment variables needed)
     NEWS_API_KEY: str = "23f50c0706ca4749a289814e258449eb"
     TWITTER_API_KEY: str = "your_twitter_api_key_here"
-    TWITTER_API_SECRET: str = "your_twitter_api_secret_here"
+    TWITTER_API_SECRET: str = "1667448272146018304-vjKCdMugwccsrM29iFXgrPeUYylIwm"
     TWITTER_ACCESS_TOKEN: str = "your_twitter_access_token_here"
     TWITTER_ACCESS_SECRET: str = "your_twitter_access_secret_here"
     ALPHA_VANTAGE_API_KEY: str = "UZ3VFKHQQEEGQMCZ"
