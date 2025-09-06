@@ -317,36 +317,235 @@ class IndianMarketDataFetcher:
         }
     
     def fetch_index_data(self, symbol: str, period: str = "1y", interval: str = "1d") -> pd.DataFrame:
-        """Fetch OHLCV data for Indian market indices"""
+        """Fetch OHLCV data for Indian market indices using live data sources"""
         try:
             if symbol not in INDIAN_MARKET_SYMBOLS:
                 raise ValueError(f"Symbol {symbol} not found in Indian market symbols")
             
-            yahoo_symbol = INDIAN_MARKET_SYMBOLS[symbol].yahoo_symbol
-            ticker = yf.Ticker(yahoo_symbol)
+            # Try multiple data sources in order of preference
+            data = self._fetch_from_multiple_sources(symbol, period, interval)
             
-            # Fetch data with timezone handling
-            data = ticker.history(period=period, interval=interval)
-            
-            if data.empty:
-                raise ValueError(f"No data found for {symbol}")
-            
-            # Convert to IST timezone
-            if data.index.tz is None:
-                data.index = data.index.tz_localize('UTC')
-            data.index = data.index.tz_convert('Asia/Kolkata')
-            
-            # Add Indian market specific columns
-            data['Symbol'] = symbol
-            data['Index_Name'] = INDIAN_MARKET_SYMBOLS[symbol].name
-            
-            logger.info(f"Successfully fetched {len(data)} records for {symbol}")
-            return data
+            if not data.empty:
+                # Convert to IST timezone
+                if data.index.tz is None:
+                    data.index = data.index.tz_localize('UTC')
+                data.index = data.index.tz_convert('Asia/Kolkata')
+                
+                # Add Indian market specific columns
+                data['Symbol'] = symbol
+                data['Index_Name'] = INDIAN_MARKET_SYMBOLS[symbol].name
+                
+                logger.info(f"Successfully fetched {len(data)} LIVE records for {symbol}")
+                return data
+            else:
+                raise ValueError(f"No live data found for {symbol}")
             
         except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {e}")
-            logger.info(f"Generating mock data for {symbol} for demonstration purposes")
+            logger.error(f"Error fetching live data for {symbol}: {e}")
+            logger.warning(f"Falling back to mock data for {symbol} - CONFIGURE LIVE DATA SOURCES")
             return self._generate_mock_data(symbol, period, interval)
+    
+    def _fetch_from_multiple_sources(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
+        """Try multiple data sources to get live market data"""
+        yahoo_symbol = INDIAN_MARKET_SYMBOLS[symbol].yahoo_symbol
+        
+        # Source 1: Yahoo Finance (Primary)
+        try:
+            logger.info(f"Attempting to fetch {symbol} data from Yahoo Finance...")
+            ticker = yf.Ticker(yahoo_symbol)
+            data = ticker.history(period=period, interval=interval)
+            
+            if not data.empty:
+                logger.info(f"Successfully fetched {len(data)} records from Yahoo Finance")
+                return data
+            else:
+                logger.warning("Yahoo Finance returned empty data")
+                
+        except Exception as e:
+            logger.warning(f"Yahoo Finance failed: {e}")
+        
+        # Source 2: Alpha Vantage (if API key available)
+        if self.alpha_vantage_api_key and self.alpha_vantage_api_key != "your_alpha_vantage_api_key_here":
+            try:
+                logger.info(f"Attempting to fetch {symbol} data from Alpha Vantage...")
+                data = self._fetch_alpha_vantage_ohlcv(symbol, period, interval)
+                if not data.empty:
+                    logger.info(f"Successfully fetched {len(data)} records from Alpha Vantage")
+                    return data
+            except Exception as e:
+                logger.warning(f"Alpha Vantage failed: {e}")
+        
+        # Source 3: Finnhub (if API key available)
+        if self.finnhub_api_key and self.finnhub_api_key != "your_finnhub_api_key_here":
+            try:
+                logger.info(f"Attempting to fetch {symbol} data from Finnhub...")
+                data = self._fetch_finnhub_ohlcv(symbol, period, interval)
+                if not data.empty:
+                    logger.info(f"Successfully fetched {len(data)} records from Finnhub")
+                    return data
+            except Exception as e:
+                logger.warning(f"Finnhub failed: {e}")
+        
+        # Source 4: Polygon (if API key available)
+        if self.polygon_api_key and self.polygon_api_key != "your_polygon_api_key_here":
+            try:
+                logger.info(f"Attempting to fetch {symbol} data from Polygon...")
+                data = self._fetch_polygon_ohlcv(symbol, period, interval)
+                if not data.empty:
+                    logger.info(f"Successfully fetched {len(data)} records from Polygon")
+                    return data
+            except Exception as e:
+                logger.warning(f"Polygon failed: {e}")
+        
+        logger.error("All live data sources failed")
+        return pd.DataFrame()
+    
+    def _fetch_alpha_vantage_ohlcv(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
+        """Fetch OHLCV data from Alpha Vantage"""
+        try:
+            # Map intervals to Alpha Vantage format
+            interval_map = {
+                '1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min',
+                '1h': '60min', '1d': 'daily', '1wk': 'weekly', '1mo': 'monthly'
+            }
+            
+            av_interval = interval_map.get(interval, 'daily')
+            
+            # Map periods
+            period_map = {
+                '1d': 'compact', '5d': 'compact', '1mo': 'compact',
+                '3mo': 'full', '6mo': 'full', '1y': 'full', '2y': 'full'
+            }
+            
+            outputsize = period_map.get(period, 'compact')
+            
+            url = "https://www.alphavantage.co/query"
+            params = {
+                'function': 'TIME_SERIES_INTRADAY' if av_interval != 'daily' else 'TIME_SERIES_DAILY',
+                'symbol': INDIAN_MARKET_SYMBOLS[symbol].yahoo_symbol,
+                'interval': av_interval,
+                'apikey': self.alpha_vantage_api_key,
+                'outputsize': outputsize
+            }
+            
+            response = self.session.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            if 'Error Message' in data or 'Note' in data:
+                return pd.DataFrame()
+            
+            # Parse Alpha Vantage response
+            time_series_key = 'Time Series (Daily)' if av_interval == 'daily' else f'Time Series ({av_interval})'
+            time_series = data.get(time_series_key, {})
+            
+            if not time_series:
+                return pd.DataFrame()
+            
+            # Convert to DataFrame
+            df_data = []
+            for date_str, values in time_series.items():
+                df_data.append({
+                    'Open': float(values['1. open']),
+                    'High': float(values['2. high']),
+                    'Low': float(values['3. low']),
+                    'Close': float(values['4. close']),
+                    'Volume': int(values['5. volume'])
+                })
+            
+            df = pd.DataFrame(df_data, index=pd.to_datetime(list(time_series.keys())))
+            df = df.sort_index()
+            
+            return df
+            
+        except Exception as e:
+            logger.error(f"Error fetching Alpha Vantage data: {e}")
+            return pd.DataFrame()
+    
+    def _fetch_finnhub_ohlcv(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
+        """Fetch OHLCV data from Finnhub"""
+        try:
+            # Finnhub uses different symbol format
+            finnhub_symbol = self._convert_to_finnhub_symbol(symbol)
+            
+            # Calculate timestamp range
+            end_time = int(datetime.now().timestamp())
+            period_days = {'1d': 1, '5d': 5, '1mo': 30, '3mo': 90, '6mo': 180, '1y': 365}
+            days = period_days.get(period, 30)
+            start_time = end_time - (days * 24 * 60 * 60)
+            
+            url = "https://finnhub.io/api/v1/stock/candle"
+            params = {
+                'symbol': finnhub_symbol,
+                'resolution': interval,
+                'from': start_time,
+                'to': end_time,
+                'token': self.finnhub_api_key
+            }
+            
+            response = self.session.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            if data.get('s') != 'ok':
+                return pd.DataFrame()
+            
+            # Convert to DataFrame
+            df = pd.DataFrame({
+                'Open': data['o'],
+                'High': data['h'],
+                'Low': data['l'],
+                'Close': data['c'],
+                'Volume': data['v']
+            }, index=pd.to_datetime(data['t'], unit='s'))
+            
+            return df
+            
+        except Exception as e:
+            logger.error(f"Error fetching Finnhub data: {e}")
+            return pd.DataFrame()
+    
+    def _fetch_polygon_ohlcv(self, symbol: str, period: str, interval: str) -> pd.DataFrame:
+        """Fetch OHLCV data from Polygon"""
+        try:
+            # Polygon uses different symbol format
+            polygon_symbol = INDIAN_MARKET_SYMBOLS[symbol].yahoo_symbol.replace('^', 'I:')
+            
+            # Calculate date range
+            end_date = datetime.now().strftime('%Y-%m-%d')
+            period_days = {'1d': 1, '5d': 5, '1mo': 30, '3mo': 90, '6mo': 180, '1y': 365}
+            days = period_days.get(period, 30)
+            start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+            
+            url = f"https://api.polygon.io/v2/aggs/ticker/{polygon_symbol}/range/1/{interval}/{start_date}/{end_date}"
+            params = {'apikey': self.polygon_api_key}
+            
+            response = self.session.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            if data.get('status') != 'OK' or not data.get('results'):
+                return pd.DataFrame()
+            
+            # Convert to DataFrame
+            df_data = []
+            for result in data['results']:
+                df_data.append({
+                    'Open': result['o'],
+                    'High': result['h'],
+                    'Low': result['l'],
+                    'Close': result['c'],
+                    'Volume': result['v']
+                })
+            
+            df = pd.DataFrame(df_data, index=pd.to_datetime([r['t'] for r in data['results']], unit='ms'))
+            df = df.sort_index()
+            
+            return df
+            
+        except Exception as e:
+            logger.error(f"Error fetching Polygon data: {e}")
+            return pd.DataFrame()
     
     def fetch_multiple_indices(self, symbols: List[str], period: str = "1y") -> Dict[str, pd.DataFrame]:
         """Fetch data for multiple Indian market indices"""
@@ -842,18 +1041,19 @@ class IndianMarketDataFetcher:
     
     def _generate_mock_data(self, symbol: str, period: str = "1y", interval: str = "1d") -> pd.DataFrame:
         """Generate mock data for demonstration purposes when real data is not available"""
+        logger.warning(f"Using mock data for {symbol} - this should be replaced with live data sources")
         try:
-            # Base prices for different indices
+            # Base prices for different indices (updated with more recent values)
             base_prices = {
-                'NIFTY_50': 19500.0,
-                'BANK_NIFTY': 45000.0,
-                'SENSEX': 65000.0,
-                'NIFTY_IT': 35000.0,
-                'NIFTY_AUTO': 18000.0,
-                'NIFTY_PHARMA': 15000.0
+                'NIFTY_50': 24000.0,
+                'BANK_NIFTY': 52000.0,
+                'SENSEX': 80000.0,
+                'NIFTY_IT': 42000.0,
+                'NIFTY_AUTO': 22000.0,
+                'NIFTY_PHARMA': 18000.0
             }
             
-            base_price = base_prices.get(symbol, 20000.0)
+            base_price = base_prices.get(symbol, 25000.0)
             
             # Calculate number of days based on period
             period_days = {
@@ -919,7 +1119,7 @@ class IndianMarketDataFetcher:
             df['Symbol'] = symbol
             df['Index_Name'] = INDIAN_MARKET_SYMBOLS[symbol].name
             
-            logger.info(f"Generated {len(df)} mock records for {symbol}")
+            logger.warning(f"Generated {len(df)} MOCK records for {symbol} - USE LIVE DATA IN PRODUCTION")
             return df
             
         except Exception as e:
