@@ -703,20 +703,62 @@ class LivePredictionEngine:
         )
     
     def get_entry_signal(self, prediction: PredictionResult) -> MarketEntrySignal:
-        """Generate detailed entry signal with risk management"""
+        """Generate detailed entry signal with advanced risk management"""
         current_price = prediction.current_price
         
+        # Calculate dynamic stop loss based on volatility and confidence
+        volatility_factor = self._calculate_volatility_factor(prediction)
+        confidence_factor = prediction.confidence_5m
+        
         if prediction.entry_signal == 'BUY':
-            target_price = prediction.predicted_price_5m
-            stop_loss = current_price * 0.998  # 0.2% stop loss
-            risk_reward = (target_price - current_price) / (current_price - stop_loss)
-            reasoning = f"Strong upward momentum predicted with {prediction.confidence_5m:.1%} confidence"
+            # Multi-timeframe target analysis
+            target_1m = prediction.predicted_price_1m
+            target_5m = prediction.predicted_price_5m
+            target_10m = prediction.predicted_price_10m
+            
+            # Use weighted average of targets based on confidence
+            weighted_target = (
+                target_1m * prediction.confidence_1m * 0.2 +
+                target_5m * prediction.confidence_5m * 0.5 +
+                target_10m * prediction.confidence_10m * 0.3
+            ) / (prediction.confidence_1m * 0.2 + prediction.confidence_5m * 0.5 + prediction.confidence_10m * 0.3)
+            
+            # Dynamic stop loss based on volatility and confidence
+            base_stop_loss = current_price * (1 - (0.5 + volatility_factor) * 0.01)  # 0.5-1.5% stop loss
+            stop_loss = min(base_stop_loss, current_price * 0.995)  # Maximum 0.5% stop loss
+            
+            # Calculate risk-reward ratio
+            potential_profit = weighted_target - current_price
+            potential_loss = current_price - stop_loss
+            risk_reward = potential_profit / potential_loss if potential_loss > 0 else 0
+            
+            # Enhanced reasoning
+            reasoning = self._generate_buy_reasoning(prediction, weighted_target, stop_loss, risk_reward)
             
         elif prediction.entry_signal == 'SELL':
-            target_price = prediction.predicted_price_5m
-            stop_loss = current_price * 1.002  # 0.2% stop loss
-            risk_reward = (current_price - target_price) / (stop_loss - current_price)
-            reasoning = f"Downward trend predicted with {prediction.confidence_5m:.1%} confidence"
+            # Multi-timeframe target analysis
+            target_1m = prediction.predicted_price_1m
+            target_5m = prediction.predicted_price_5m
+            target_10m = prediction.predicted_price_10m
+            
+            # Use weighted average of targets based on confidence
+            weighted_target = (
+                target_1m * prediction.confidence_1m * 0.2 +
+                target_5m * prediction.confidence_5m * 0.5 +
+                target_10m * prediction.confidence_10m * 0.3
+            ) / (prediction.confidence_1m * 0.2 + prediction.confidence_5m * 0.5 + prediction.confidence_10m * 0.3)
+            
+            # Dynamic stop loss based on volatility and confidence
+            base_stop_loss = current_price * (1 + (0.5 + volatility_factor) * 0.01)  # 0.5-1.5% stop loss
+            stop_loss = max(base_stop_loss, current_price * 1.005)  # Minimum 0.5% stop loss
+            
+            # Calculate risk-reward ratio
+            potential_profit = current_price - weighted_target
+            potential_loss = stop_loss - current_price
+            risk_reward = potential_profit / potential_loss if potential_loss > 0 else 0
+            
+            # Enhanced reasoning
+            reasoning = self._generate_sell_reasoning(prediction, weighted_target, stop_loss, risk_reward)
             
         else:
             target_price = current_price
@@ -733,6 +775,114 @@ class LivePredictionEngine:
             reasoning=reasoning,
             timestamp=prediction.timestamp
         )
+    
+    def _calculate_volatility_factor(self, prediction: PredictionResult) -> float:
+        """Calculate volatility factor for dynamic stop loss"""
+        try:
+            # Use price change volatility across timeframes
+            price_changes = [
+                abs(prediction.price_change_1m),
+                abs(prediction.price_change_2m),
+                abs(prediction.price_change_5m),
+                abs(prediction.price_change_10m)
+            ]
+            
+            avg_volatility = np.mean(price_changes)
+            volatility_factor = min(avg_volatility * 100, 1.0)  # Cap at 1.0
+            
+            return volatility_factor
+            
+        except Exception as e:
+            logger.error(f"Error calculating volatility factor: {e}")
+            return 0.5  # Default moderate volatility
+    
+    def _generate_buy_reasoning(self, prediction: PredictionResult, target: float, stop_loss: float, risk_reward: float) -> str:
+        """Generate detailed buy reasoning"""
+        try:
+            reasoning_parts = []
+            
+            # Confidence analysis
+            if prediction.confidence_5m > 0.7:
+                reasoning_parts.append(f"High confidence ({prediction.confidence_5m:.1%})")
+            elif prediction.confidence_5m > 0.5:
+                reasoning_parts.append(f"Moderate confidence ({prediction.confidence_5m:.1%})")
+            else:
+                reasoning_parts.append(f"Low confidence ({prediction.confidence_5m:.1%})")
+            
+            # Trend analysis
+            if prediction.trend_5m == 'BULLISH':
+                if prediction.trend_strength_5m == 'STRONG':
+                    reasoning_parts.append("strong bullish momentum")
+                else:
+                    reasoning_parts.append("bullish trend")
+            
+            # Risk-reward analysis
+            if risk_reward > 2.0:
+                reasoning_parts.append(f"excellent risk-reward ratio ({risk_reward:.1f}:1)")
+            elif risk_reward > 1.5:
+                reasoning_parts.append(f"good risk-reward ratio ({risk_reward:.1f}:1)")
+            elif risk_reward > 1.0:
+                reasoning_parts.append(f"favorable risk-reward ratio ({risk_reward:.1f}:1)")
+            else:
+                reasoning_parts.append(f"poor risk-reward ratio ({risk_reward:.1f}:1)")
+            
+            # Target analysis
+            price_change = ((target - prediction.current_price) / prediction.current_price) * 100
+            reasoning_parts.append(f"target: {target:.0f} (+{price_change:.1f}%)")
+            
+            # Stop loss analysis
+            stop_loss_change = ((stop_loss - prediction.current_price) / prediction.current_price) * 100
+            reasoning_parts.append(f"stop: {stop_loss:.0f} ({stop_loss_change:.1f}%)")
+            
+            return f"BUY signal based on {', '.join(reasoning_parts)}"
+            
+        except Exception as e:
+            logger.error(f"Error generating buy reasoning: {e}")
+            return f"BUY signal with {prediction.confidence_5m:.1%} confidence"
+    
+    def _generate_sell_reasoning(self, prediction: PredictionResult, target: float, stop_loss: float, risk_reward: float) -> str:
+        """Generate detailed sell reasoning"""
+        try:
+            reasoning_parts = []
+            
+            # Confidence analysis
+            if prediction.confidence_5m > 0.7:
+                reasoning_parts.append(f"High confidence ({prediction.confidence_5m:.1%})")
+            elif prediction.confidence_5m > 0.5:
+                reasoning_parts.append(f"Moderate confidence ({prediction.confidence_5m:.1%})")
+            else:
+                reasoning_parts.append(f"Low confidence ({prediction.confidence_5m:.1%})")
+            
+            # Trend analysis
+            if prediction.trend_5m == 'BEARISH':
+                if prediction.trend_strength_5m == 'STRONG':
+                    reasoning_parts.append("strong bearish momentum")
+                else:
+                    reasoning_parts.append("bearish trend")
+            
+            # Risk-reward analysis
+            if risk_reward > 2.0:
+                reasoning_parts.append(f"excellent risk-reward ratio ({risk_reward:.1f}:1)")
+            elif risk_reward > 1.5:
+                reasoning_parts.append(f"good risk-reward ratio ({risk_reward:.1f}:1)")
+            elif risk_reward > 1.0:
+                reasoning_parts.append(f"favorable risk-reward ratio ({risk_reward:.1f}:1)")
+            else:
+                reasoning_parts.append(f"poor risk-reward ratio ({risk_reward:.1f}:1)")
+            
+            # Target analysis
+            price_change = ((target - prediction.current_price) / prediction.current_price) * 100
+            reasoning_parts.append(f"target: {target:.0f} ({price_change:.1f}%)")
+            
+            # Stop loss analysis
+            stop_loss_change = ((stop_loss - prediction.current_price) / prediction.current_price) * 100
+            reasoning_parts.append(f"stop: {stop_loss:.0f} (+{stop_loss_change:.1f}%)")
+            
+            return f"SELL signal based on {', '.join(reasoning_parts)}"
+            
+        except Exception as e:
+            logger.error(f"Error generating sell reasoning: {e}")
+            return f"SELL signal with {prediction.confidence_5m:.1%} confidence"
     
     def get_prediction_accuracy(self) -> Dict[str, float]:
         """Calculate prediction accuracy from live prediction history"""
