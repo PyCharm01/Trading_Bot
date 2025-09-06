@@ -85,10 +85,10 @@ class AppConfig:
     
     # API Keys (Direct configuration - no environment variables needed)
     NEWS_API_KEY: str = "23f50c0706ca4749a289814e258449eb"
-    TWITTER_API_KEY: str = "your_twitter_api_key_here"
-    TWITTER_API_SECRET: str = "1667448272146018304-vjKCdMugwccsrM29iFXgrPeUYylIwm"
-    TWITTER_ACCESS_TOKEN: str = "your_twitter_access_token_here"
-    TWITTER_ACCESS_SECRET: str = "your_twitter_access_secret_here"
+    TWITTER_API_KEY: str = "HiwyesLIFwKY6DfWkeANu0jQr"
+    TWITTER_API_SECRET: str = "6tCFusxdbE9zkXb02Sze1IuduzgMp2rEr8iHq9p2SNtiRCLGBL"
+    TWITTER_ACCESS_TOKEN: str = "1667448272146018304-vjKCdMugwccsrM29iFXgrPeUYylIwm"
+    TWITTER_ACCESS_SECRET: str = "H7UKvRFpcHUSkGDrmsBYMpHtQpPTQtb2mqQ4X4uQmvM76"
     ALPHA_VANTAGE_API_KEY: str = "UZ3VFKHQQEEGQMCZ"
     QUANDL_API_KEY: str = "3iDzmsGkQEQmEznLxa-z"
     
