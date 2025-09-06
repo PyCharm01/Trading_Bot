@@ -2152,11 +2152,11 @@ class IndianTradingApp:
             st.divider()
             
             if chart_type == "Basic Chart":
-                st.subheader(f"📊 {INDIAN_MARKET_SYMBOLS[selected_symbol]['name']} - Basic Chart")
+                st.subheader(f"📊 {INDIAN_MARKET_SYMBOLS[selected_symbol].name} - Basic Chart")
                 show_tradingview_chart(selected_symbol, "basic", height)
                 
             elif chart_type == "Advanced Chart":
-                st.subheader(f"📊 {INDIAN_MARKET_SYMBOLS[selected_symbol]['name']} - Advanced Chart")
+                st.subheader(f"📊 {INDIAN_MARKET_SYMBOLS[selected_symbol].name} - Advanced Chart")
                 st.info("🔧 Advanced chart includes RSI, MACD, and Volume indicators")
                 show_tradingview_chart(selected_symbol, "advanced", height)
                 
@@ -2189,17 +2189,17 @@ class IndianTradingApp:
                     symbol2 = st.selectbox("Second Symbol", available_symbols, key="symbol2")
                 
                 if symbol1 and symbol2:
-                    st.write(f"**Comparing {INDIAN_MARKET_SYMBOLS[symbol1]['name']} vs {INDIAN_MARKET_SYMBOLS[symbol2]['name']}**")
+                    st.write(f"**Comparing {INDIAN_MARKET_SYMBOLS[symbol1].name} vs {INDIAN_MARKET_SYMBOLS[symbol2].name}**")
                     
                     # Display both charts side by side
                     col1, col2 = st.columns(2)
                     
                     with col1:
-                        st.write(f"**{INDIAN_MARKET_SYMBOLS[symbol1]['name']}**")
+                        st.write(f"**{INDIAN_MARKET_SYMBOLS[symbol1].name}**")
                         show_tradingview_chart(symbol1, "basic", height)
                     
                     with col2:
-                        st.write(f"**{INDIAN_MARKET_SYMBOLS[symbol2]['name']}**")
+                        st.write(f"**{INDIAN_MARKET_SYMBOLS[symbol2].name}**")
                         show_tradingview_chart(symbol2, "basic", height)
             
             # Chart information
