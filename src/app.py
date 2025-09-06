@@ -827,6 +827,40 @@ class IndianTradingApp:
                 except:
                     st.metric("VWAP", f"₹{analysis['current_price']:,.0f}")
             
+            # TradingView Chart Section
+            st.markdown("---")
+            st.subheader("📊 Live TradingView Charts")
+            
+            # Create tabs for different chart types
+            tab1, tab2, tab3 = st.tabs(["Advanced Chart", "Basic Chart", "Multi-Symbol Chart"])
+            
+            with tab1:
+                st.markdown("**Advanced TradingView Chart with Technical Indicators**")
+                try:
+                    from src.visualization.tradingview_widget import show_tradingview_chart
+                    show_tradingview_chart(symbol, "advanced", 600)
+                except Exception as e:
+                    st.error(f"Error loading TradingView Advanced Chart: {e}")
+                    st.info("Please check your internet connection")
+            
+            with tab2:
+                st.markdown("**Basic TradingView Chart**")
+                try:
+                    from src.visualization.tradingview_widget import show_tradingview_chart
+                    show_tradingview_chart(symbol, "basic", 500)
+                except Exception as e:
+                    st.error(f"Error loading TradingView Basic Chart: {e}")
+                    st.info("Please check your internet connection")
+            
+            with tab3:
+                st.markdown("**Multi-Symbol TradingView Chart**")
+                try:
+                    from src.visualization.tradingview_widget import show_tradingview_chart
+                    show_tradingview_chart(symbol, "multi", 500)
+                except Exception as e:
+                    st.error(f"Error loading TradingView Multi Chart: {e}")
+                    st.info("Please check your internet connection")
+            
             # VPC Indicator Display (like in the reference chart)
             if 'VWAP_Price_Channel' in st.session_state.analysis_params['indicators']:
                 try:
@@ -867,43 +901,57 @@ class IndianTradingApp:
             # Technical indicators chart
             st.subheader("📊 Technical Indicators Chart")
             
-            # Add chart type selector
+            # Add chart type selector with TradingView integration
             chart_type = st.radio(
                 "Select Chart Type:",
-                ["Simple Test Chart", "Full Technical Analysis", "VWAP Price Channel Focus", "Channel Comparison: Donchian vs VWAP"],
+                ["TradingView Advanced Chart", "TradingView Basic Chart", "TradingView Multi Chart", "Custom Technical Analysis"],
                 horizontal=True
             )
             
             try:
-                if chart_type == "Simple Test Chart":
-                    # Show simple test chart
-                    chart = self.visualizer.create_simple_test_chart(data, symbol)
-                elif chart_type == "VWAP Price Channel Focus":
-                    # Show dedicated VWAP Price Channel chart
-                    chart = self.visualizer.create_vwap_price_channel_chart(
-                        data, analysis['indicators'], symbol
-                    )
-                elif chart_type == "Channel Comparison: Donchian vs VWAP":
-                    # Show channel comparison chart
-                    chart = self.visualizer.create_channel_comparison_chart(
-                        data, analysis['indicators'], symbol
-                    )
+                if chart_type == "TradingView Advanced Chart":
+                    # Show TradingView advanced chart with indicators
+                    st.subheader("📊 TradingView Advanced Chart")
+                    from src.visualization.tradingview_widget import show_tradingview_chart
+                    show_tradingview_chart(symbol, "advanced", 600)
+                    
+                elif chart_type == "TradingView Basic Chart":
+                    # Show TradingView basic chart
+                    st.subheader("📈 TradingView Basic Chart")
+                    from src.visualization.tradingview_widget import show_tradingview_chart
+                    show_tradingview_chart(symbol, "basic", 500)
+                    
+                elif chart_type == "TradingView Multi Chart":
+                    # Show TradingView multi-symbol chart
+                    st.subheader("📊 TradingView Multi-Symbol Chart")
+                    from src.visualization.tradingview_widget import show_tradingview_chart
+                    show_tradingview_chart(symbol, "multi", 500)
+                    
                 else:
-                    # Show full technical analysis chart
+                    # Show custom technical analysis chart (fallback)
+                    st.subheader("📊 Custom Technical Analysis Chart")
                     chart = self.visualizer.create_indian_technical_analysis_chart(
                         data, analysis['indicators'], symbol
                     )
-                
-                if chart and len(chart.data) > 0:
-                    st.plotly_chart(chart, use_container_width=True)
-                else:
-                    st.error("Chart creation failed or returned empty chart")
-                    st.info("Try selecting 'Simple Test Chart' to verify basic functionality")
+                    
+                    if chart and len(chart.data) > 0:
+                        st.plotly_chart(chart, use_container_width=True)
+                    else:
+                        st.error("Custom chart creation failed")
+                        st.info("TradingView charts are recommended for better visualization")
+                        
             except Exception as e:
-                st.error(f"Error creating technical chart: {e}")
-                import traceback
-                st.code(traceback.format_exc())
-                st.info("This might be due to insufficient data or network issues. Try refreshing the page.")
+                st.error(f"Error creating chart: {e}")
+                st.info("TradingView charts require internet connection. Using fallback visualization.")
+                
+                # Fallback to simple chart
+                try:
+                    chart = self.visualizer.create_simple_test_chart(data, symbol)
+                    if chart and len(chart.data) > 0:
+                        st.plotly_chart(chart, use_container_width=True)
+                except Exception as fallback_error:
+                    st.error(f"Fallback chart also failed: {fallback_error}")
+                    st.info("Please check your internet connection for TradingView charts")
             
             # Detailed analysis
             st.subheader("🔍 Detailed Analysis")
@@ -2123,7 +2171,7 @@ class IndianTradingApp:
         
         try:
             # Chart type selection
-            col1, col2 = st.columns([2, 1])
+            col1, col2, col3 = st.columns([2, 1, 1])
             
             with col1:
                 chart_type = st.selectbox(
@@ -2137,6 +2185,12 @@ class IndianTradingApp:
                     "Chart Theme",
                     ["dark", "light"],
                     help="Select chart theme"
+                )
+            
+            with col3:
+                use_fallback = st.checkbox(
+                    "Use Fallback Symbols",
+                    help="Use US stocks if Indian markets aren't available"
                 )
             
             # Symbol selection
@@ -2153,12 +2207,30 @@ class IndianTradingApp:
             
             if chart_type == "Basic Chart":
                 st.subheader(f"📊 {INDIAN_MARKET_SYMBOLS[selected_symbol].name} - Basic Chart")
-                show_tradingview_chart(selected_symbol, "basic", height)
+                # Show the TradingView symbol being used
+                widget = TradingViewWidget()
+                tv_symbol = widget._get_tradingview_symbol(selected_symbol, use_fallback)
+                st.caption(f"TradingView Symbol: {tv_symbol}")
+                
+                # Show warning if using fallback
+                if use_fallback:
+                    st.warning("⚠️ Using fallback US stock symbols. Indian market data may not be available.")
+                
+                show_tradingview_chart(selected_symbol, "basic", height, use_fallback)
                 
             elif chart_type == "Advanced Chart":
                 st.subheader(f"📊 {INDIAN_MARKET_SYMBOLS[selected_symbol].name} - Advanced Chart")
+                # Show the TradingView symbol being used
+                widget = TradingViewWidget()
+                tv_symbol = widget._get_tradingview_symbol(selected_symbol, use_fallback)
+                st.caption(f"TradingView Symbol: {tv_symbol}")
+                
+                # Show warning if using fallback
+                if use_fallback:
+                    st.warning("⚠️ Using fallback US stock symbols. Indian market data may not be available.")
+                
                 st.info("🔧 Advanced chart includes RSI, MACD, and Volume indicators")
-                show_tradingview_chart(selected_symbol, "advanced", height)
+                show_tradingview_chart(selected_symbol, "advanced", height, use_fallback)
                 
             elif chart_type == "Multi-Symbol Chart":
                 st.subheader("📊 Multi-Symbol Overview")
@@ -2220,6 +2292,41 @@ class IndianTradingApp:
                 st.metric("Chart Type", chart_type)
                 st.metric("Theme", theme.title())
             
+            # Debug information
+            if st.checkbox("🔧 Show Debug Information", help="Show technical details for troubleshooting"):
+                st.subheader("🔧 Debug Information")
+                
+                # Get the TradingView symbol
+                try:
+                    widget = TradingViewWidget()
+                    tradingview_symbol = widget._get_tradingview_symbol(selected_symbol)
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.write("**Symbol Mapping:**")
+                        st.code(f"Internal: {selected_symbol}")
+                        st.code(f"TradingView: {tradingview_symbol}")
+                        
+                        st.write("**Available Symbols:**")
+                        for key in INDIAN_MARKET_SYMBOLS.keys():
+                            tv_symbol = widget._get_tradingview_symbol(key)
+                            st.write(f"• {key} → {tv_symbol}")
+                    
+                    with col2:
+                        st.write("**Chart Configuration:**")
+                        st.code(f"Height: {height}px")
+                        st.code(f"Theme: {theme}")
+                        st.code(f"Type: {chart_type}")
+                        
+                        st.write("**TradingView Widget Status:**")
+                        st.success("✅ Widget loaded successfully")
+                        st.info("📡 Charts load from TradingView servers")
+                        st.warning("⚠️ Requires internet connection")
+                        
+                except Exception as e:
+                    st.error(f"Debug error: {e}")
+            
             # TradingView features
             st.subheader("🚀 TradingView Features")
             
@@ -2236,6 +2343,30 @@ class IndianTradingApp:
             
             for feature in features:
                 st.write(feature)
+            
+            # Data availability information
+            st.divider()
+            st.subheader("ℹ️ Data Availability Information")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.info("""
+                **Indian Market Data:**
+                - NIFTY 50, Bank Nifty, Sensex
+                - NIFTY IT, NIFTY Auto, NIFTY Pharma
+                - May require TradingView Pro account
+                - Data availability varies by region
+                """)
+            
+            with col2:
+                st.warning("""
+                **If Indian markets don't load:**
+                - Check "Use Fallback Symbols" option
+                - Fallback uses US stocks (AAPL, MSFT, etc.)
+                - This is a TradingView data limitation
+                - Not an issue with your trading bot
+                """)
             
             # Auto-refresh option
             st.divider()
