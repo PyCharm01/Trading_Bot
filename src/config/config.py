@@ -84,7 +84,7 @@ class AppConfig:
     GRID_COLOR: str = "#E9ECEF"
     
     # API Keys (Direct configuration - no environment variables needed)
-    NEWS_API_KEY: str = "your_news_api_key_here"
+    NEWS_API_KEY: str = "23f50c0706ca4749a289814e258449eb"
     TWITTER_API_KEY: str = "your_twitter_api_key_here"
     TWITTER_API_SECRET: str = "your_twitter_api_secret_here"
     TWITTER_ACCESS_TOKEN: str = "your_twitter_access_token_here"
