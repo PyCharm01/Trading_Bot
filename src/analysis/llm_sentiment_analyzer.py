@@ -15,10 +15,32 @@ from dataclasses import dataclass, asdict
 import json
 import requests
 import asyncio
-import aiohttp
-from concurrent.futures import ThreadPoolExecutor
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
+
+# Optional async dependencies
+try:
+    import aiohttp
+    AIOHTTP_AVAILABLE = True
+except ImportError:
+    AIOHTTP_AVAILABLE = False
+    logging.warning("aiohttp not available. Async functionality will be limited.")
+
+# Optional LLM dependencies
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    logging.warning("openai not available. OpenAI functionality will be disabled.")
+
+try:
+    import anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
+    logging.warning("anthropic not available. Anthropic functionality will be disabled.")
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +150,9 @@ class LLMSentimentAnalyzer:
     async def _analyze_with_openai(self, text: str, context: str) -> SentimentResult:
         """Analyze sentiment using OpenAI API"""
         try:
-            import openai
+            if not OPENAI_AVAILABLE:
+                logger.warning("OpenAI not available, falling back to keyword analysis")
+                return self._analyze_with_keywords(text)
             
             client = openai.AsyncOpenAI(api_key=self.openai_api_key)
             
@@ -185,7 +209,9 @@ class LLMSentimentAnalyzer:
     def _analyze_with_openai_sync(self, text: str, context: str) -> SentimentResult:
         """Synchronous OpenAI sentiment analysis"""
         try:
-            import openai
+            if not OPENAI_AVAILABLE:
+                logger.warning("OpenAI not available, falling back to keyword analysis")
+                return self._analyze_with_keywords(text)
             
             client = openai.OpenAI(api_key=self.openai_api_key)
             
@@ -242,7 +268,9 @@ class LLMSentimentAnalyzer:
     async def _analyze_with_anthropic(self, text: str, context: str) -> SentimentResult:
         """Analyze sentiment using Anthropic Claude API"""
         try:
-            import anthropic
+            if not ANTHROPIC_AVAILABLE:
+                logger.warning("Anthropic not available, falling back to keyword analysis")
+                return self._analyze_with_keywords(text)
             
             client = anthropic.AsyncAnthropic(api_key=self.anthropic_api_key)
             
@@ -298,7 +326,9 @@ class LLMSentimentAnalyzer:
     def _analyze_with_anthropic_sync(self, text: str, context: str) -> SentimentResult:
         """Synchronous Anthropic sentiment analysis"""
         try:
-            import anthropic
+            if not ANTHROPIC_AVAILABLE:
+                logger.warning("Anthropic not available, falling back to keyword analysis")
+                return self._analyze_with_keywords(text)
             
             client = anthropic.Anthropic(api_key=self.anthropic_api_key)
             
@@ -354,6 +384,10 @@ class LLMSentimentAnalyzer:
     async def _analyze_with_local_llm(self, text: str, context: str) -> SentimentResult:
         """Analyze sentiment using local LLM (Ollama)"""
         try:
+            if not AIOHTTP_AVAILABLE:
+                logger.warning("aiohttp not available, falling back to keyword analysis")
+                return self._analyze_with_keywords(text)
+            
             async with aiohttp.ClientSession() as session:
                 payload = {
                     "model": "llama2",
@@ -378,7 +412,7 @@ class LLMSentimentAnalyzer:
                         "keywords": ["string"],
                         "market_impact": "string"
                     }}
-                    """,
+                    ,
                     "stream": False
                 }
                 
