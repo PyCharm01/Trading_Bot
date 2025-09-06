@@ -12,11 +12,18 @@ import logging
 import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
-import uvicorn
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import pandas as pd
+
+# Optional web framework dependencies
+try:
+    import uvicorn
+    from fastapi import FastAPI, HTTPException, BackgroundTasks
+    from fastapi.middleware.cors import CORSMiddleware
+    from pydantic import BaseModel
+    WEB_FRAMEWORK_AVAILABLE = True
+except ImportError:
+    WEB_FRAMEWORK_AVAILABLE = False
+    logging.warning("FastAPI/uvicorn not available. MCP server functionality will be limited.")
 
 # Import our sentiment analyzer
 from .llm_sentiment_analyzer import LLMSentimentAnalyzer, SentimentResult, NewsArticle, MarketSentiment
