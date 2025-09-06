@@ -390,24 +390,48 @@ class IndianOptionsStrategyEngine:
             if not best_expiry:
                 return self._create_mock_strategy(technical_signal, current_price, index_name, lot_size)
             
-            # Strategy selection logic
+            # Enhanced strategy selection logic with more diverse strategies
             if technical_signal == 'BUY':
                 if is_high_iv:
-                    return self._create_bull_call_spread(index_name, current_price, best_expiry, lot_size)
+                    # High IV: Use spreads to reduce cost
+                    if market_regime == 'volatile':
+                        return self._create_bull_call_spread(index_name, current_price, best_expiry, lot_size)
+                    else:
+                        return self._create_bull_put_spread(index_name, current_price, best_expiry, lot_size)
                 else:
-                    return self._create_long_call(index_name, current_price, best_expiry, lot_size)
+                    # Low IV: Use directional strategies
+                    if market_regime == 'trending':
+                        return self._create_long_call(index_name, current_price, best_expiry, lot_size)
+                    else:
+                        return self._create_call_ratio_spread(index_name, current_price, best_expiry, lot_size)
             
             elif technical_signal == 'SELL':
                 if is_high_iv:
-                    return self._create_bear_put_spread(index_name, current_price, best_expiry, lot_size)
+                    # High IV: Use spreads to reduce cost
+                    if market_regime == 'volatile':
+                        return self._create_bear_put_spread(index_name, current_price, best_expiry, lot_size)
+                    else:
+                        return self._create_bear_call_spread(index_name, current_price, best_expiry, lot_size)
                 else:
-                    return self._create_long_put(index_name, current_price, best_expiry, lot_size)
+                    # Low IV: Use directional strategies
+                    if market_regime == 'trending':
+                        return self._create_long_put(index_name, current_price, best_expiry, lot_size)
+                    else:
+                        return self._create_put_ratio_spread(index_name, current_price, best_expiry, lot_size)
             
             else:  # NEUTRAL
                 if is_high_iv:
-                    return self._create_iron_condor(index_name, current_price, best_expiry, lot_size)
+                    # High IV: Use premium collection strategies
+                    if market_regime == 'ranging':
+                        return self._create_iron_condor(index_name, current_price, best_expiry, lot_size)
+                    else:
+                        return self._create_short_straddle(index_name, current_price, best_expiry, lot_size)
                 else:
-                    return self._create_long_straddle(index_name, current_price, best_expiry, lot_size)
+                    # Low IV: Use volatility strategies
+                    if market_regime == 'ranging':
+                        return self._create_long_straddle(index_name, current_price, best_expiry, lot_size)
+                    else:
+                        return self._create_long_strangle(index_name, current_price, best_expiry, lot_size)
             
         except Exception as e:
             logger.error(f"Error recommending strategy: {e}")
@@ -736,6 +760,222 @@ class IndianOptionsStrategyEngine:
             margin_required=0,
             lot_size=lot_size
         )
+    
+    def _create_bull_put_spread(self, index_name: str, current_price: float, expiry: str, lot_size: int) -> OptionsStrategy:
+        """Create bull put spread strategy"""
+        try:
+            strike_spacing = 200
+            atm_strike = round(current_price / strike_spacing) * strike_spacing
+            
+            # Sell higher strike put, buy lower strike put
+            sell_strike = atm_strike
+            buy_strike = atm_strike - strike_spacing
+            
+            # Premiums
+            sell_premium = 120
+            buy_premium = 80
+            
+            net_credit = sell_premium - buy_premium
+            max_profit = net_credit
+            max_loss = strike_spacing - net_credit
+            
+            return OptionsStrategy(
+                name="Bull Put Spread",
+                description="Bullish strategy with limited risk and reward",
+                legs=[
+                    {"action": "SELL", "type": "PUT", "strike": sell_strike, "premium": sell_premium},
+                    {"action": "BUY", "type": "PUT", "strike": buy_strike, "premium": buy_premium}
+                ],
+                max_profit=max_profit * lot_size,
+                max_loss=max_loss * lot_size,
+                breakeven_points=[sell_strike - net_credit],
+                probability_of_profit=0.70,
+                risk_reward_ratio=max_profit / max_loss if max_loss > 0 else 0,
+                margin_required=max_loss * lot_size * 0.1,
+                lot_size=lot_size
+            )
+        except Exception as e:
+            logger.error(f"Error creating bull put spread: {e}")
+            return self._create_mock_strategy('BUY', current_price, index_name, lot_size)
+    
+    def _create_bear_call_spread(self, index_name: str, current_price: float, expiry: str, lot_size: int) -> OptionsStrategy:
+        """Create bear call spread strategy"""
+        try:
+            strike_spacing = 200
+            atm_strike = round(current_price / strike_spacing) * strike_spacing
+            
+            # Sell lower strike call, buy higher strike call
+            sell_strike = atm_strike
+            buy_strike = atm_strike + strike_spacing
+            
+            # Premiums
+            sell_premium = 150
+            buy_premium = 90
+            
+            net_credit = sell_premium - buy_premium
+            max_profit = net_credit
+            max_loss = strike_spacing - net_credit
+            
+            return OptionsStrategy(
+                name="Bear Call Spread",
+                description="Bearish strategy with limited risk and reward",
+                legs=[
+                    {"action": "SELL", "type": "CALL", "strike": sell_strike, "premium": sell_premium},
+                    {"action": "BUY", "type": "CALL", "strike": buy_strike, "premium": buy_premium}
+                ],
+                max_profit=max_profit * lot_size,
+                max_loss=max_loss * lot_size,
+                breakeven_points=[sell_strike + net_credit],
+                probability_of_profit=0.70,
+                risk_reward_ratio=max_profit / max_loss if max_loss > 0 else 0,
+                margin_required=max_loss * lot_size * 0.1,
+                lot_size=lot_size
+            )
+        except Exception as e:
+            logger.error(f"Error creating bear call spread: {e}")
+            return self._create_mock_strategy('SELL', current_price, index_name, lot_size)
+    
+    def _create_call_ratio_spread(self, index_name: str, current_price: float, expiry: str, lot_size: int) -> OptionsStrategy:
+        """Create call ratio spread strategy"""
+        try:
+            strike_spacing = 200
+            atm_strike = round(current_price / strike_spacing) * strike_spacing
+            
+            # Buy 1 call at lower strike, sell 2 calls at higher strike
+            buy_strike = atm_strike
+            sell_strike = atm_strike + strike_spacing
+            
+            # Premiums
+            buy_premium = 200
+            sell_premium = 100
+            
+            net_debit = buy_premium - (2 * sell_premium)
+            max_profit = sell_premium - net_debit
+            max_loss = float('inf')  # Unlimited loss above sell strike
+            
+            return OptionsStrategy(
+                name="Call Ratio Spread",
+                description="Bullish strategy with limited profit and unlimited loss",
+                legs=[
+                    {"action": "BUY", "type": "CALL", "strike": buy_strike, "premium": buy_premium},
+                    {"action": "SELL", "type": "CALL", "strike": sell_strike, "premium": sell_premium, "quantity": 2}
+                ],
+                max_profit=max_profit * lot_size,
+                max_loss=float('inf'),
+                breakeven_points=[buy_strike + net_debit, sell_strike + max_profit],
+                probability_of_profit=0.60,
+                risk_reward_ratio=0,  # Unlimited loss
+                margin_required=current_price * lot_size * 0.2,
+                lot_size=lot_size
+            )
+        except Exception as e:
+            logger.error(f"Error creating call ratio spread: {e}")
+            return self._create_mock_strategy('BUY', current_price, index_name, lot_size)
+    
+    def _create_put_ratio_spread(self, index_name: str, current_price: float, expiry: str, lot_size: int) -> OptionsStrategy:
+        """Create put ratio spread strategy"""
+        try:
+            strike_spacing = 200
+            atm_strike = round(current_price / strike_spacing) * strike_spacing
+            
+            # Buy 1 put at higher strike, sell 2 puts at lower strike
+            buy_strike = atm_strike
+            sell_strike = atm_strike - strike_spacing
+            
+            # Premiums
+            buy_premium = 180
+            sell_premium = 90
+            
+            net_debit = buy_premium - (2 * sell_premium)
+            max_profit = sell_premium - net_debit
+            max_loss = float('inf')  # Unlimited loss below sell strike
+            
+            return OptionsStrategy(
+                name="Put Ratio Spread",
+                description="Bearish strategy with limited profit and unlimited loss",
+                legs=[
+                    {"action": "BUY", "type": "PUT", "strike": buy_strike, "premium": buy_premium},
+                    {"action": "SELL", "type": "PUT", "strike": sell_strike, "premium": sell_premium, "quantity": 2}
+                ],
+                max_profit=max_profit * lot_size,
+                max_loss=float('inf'),
+                breakeven_points=[buy_strike - net_debit, sell_strike - max_profit],
+                probability_of_profit=0.60,
+                risk_reward_ratio=0,  # Unlimited loss
+                margin_required=current_price * lot_size * 0.2,
+                lot_size=lot_size
+            )
+        except Exception as e:
+            logger.error(f"Error creating put ratio spread: {e}")
+            return self._create_mock_strategy('SELL', current_price, index_name, lot_size)
+    
+    def _create_short_straddle(self, index_name: str, current_price: float, expiry: str, lot_size: int) -> OptionsStrategy:
+        """Create short straddle strategy"""
+        try:
+            atm_strike = round(current_price / 200) * 200
+            
+            # Sell both call and put at ATM
+            call_premium = 150
+            put_premium = 120
+            
+            net_credit = call_premium + put_premium
+            max_profit = net_credit
+            max_loss = float('inf')  # Unlimited loss in both directions
+            
+            return OptionsStrategy(
+                name="Short Straddle",
+                description="Neutral strategy with high risk and reward",
+                legs=[
+                    {"action": "SELL", "type": "CALL", "strike": atm_strike, "premium": call_premium},
+                    {"action": "SELL", "type": "PUT", "strike": atm_strike, "premium": put_premium}
+                ],
+                max_profit=max_profit * lot_size,
+                max_loss=float('inf'),
+                breakeven_points=[atm_strike - net_credit, atm_strike + net_credit],
+                probability_of_profit=0.50,
+                risk_reward_ratio=0,  # Unlimited loss
+                margin_required=current_price * lot_size * 0.3,
+                lot_size=lot_size
+            )
+        except Exception as e:
+            logger.error(f"Error creating short straddle: {e}")
+            return self._create_mock_strategy('NEUTRAL', current_price, index_name, lot_size)
+    
+    def _create_long_strangle(self, index_name: str, current_price: float, expiry: str, lot_size: int) -> OptionsStrategy:
+        """Create long strangle strategy"""
+        try:
+            strike_spacing = 200
+            atm_strike = round(current_price / strike_spacing) * strike_spacing
+            
+            # Buy OTM call and put
+            call_strike = atm_strike + strike_spacing
+            put_strike = atm_strike - strike_spacing
+            
+            call_premium = 80
+            put_premium = 70
+            
+            net_debit = call_premium + put_premium
+            max_profit = float('inf')  # Unlimited profit in both directions
+            max_loss = net_debit
+            
+            return OptionsStrategy(
+                name="Long Strangle",
+                description="Volatility strategy with unlimited profit potential",
+                legs=[
+                    {"action": "BUY", "type": "CALL", "strike": call_strike, "premium": call_premium},
+                    {"action": "BUY", "type": "PUT", "strike": put_strike, "premium": put_premium}
+                ],
+                max_profit=float('inf'),
+                max_loss=max_loss * lot_size,
+                breakeven_points=[put_strike - net_debit, call_strike + net_debit],
+                probability_of_profit=0.40,
+                risk_reward_ratio=float('inf'),
+                margin_required=net_debit * lot_size,
+                lot_size=lot_size
+            )
+        except Exception as e:
+            logger.error(f"Error creating long strangle: {e}")
+            return self._create_mock_strategy('NEUTRAL', current_price, index_name, lot_size)
 
 # Example usage and testing
 if __name__ == "__main__":
