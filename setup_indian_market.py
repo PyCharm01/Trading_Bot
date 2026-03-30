@@ -82,10 +82,9 @@ class IndianMarketSetup:
             "pytz>=2023.3"
         ]
         
-        # Install core dependencies
-        for dep in core_deps:
-            logger.info(f"Installing {dep}...")
-            subprocess.run([sys.executable, "-m", "pip", "install", dep], check=True)
+        # Install core dependencies in a single batch call
+        logger.info("Installing core dependencies...")
+        subprocess.run([sys.executable, "-m", "pip", "install"] + core_deps, check=True)
         
         # Optional dependencies
         optional_deps = [
