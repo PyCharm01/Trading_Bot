@@ -32,15 +32,108 @@ logger = logging.getLogger(__name__)
 # Get configuration
 config = get_config()
 
+
+# ---------------------------------------------------------------------------
+# Cached singleton resources (one instance per Streamlit server process)
+# ---------------------------------------------------------------------------
+
+@st.cache_resource
+def _get_data_fetcher() -> "IndianMarketDataFetcher":
+    """Return a cached singleton data fetcher."""
+    return IndianMarketDataFetcher()
+
+
+@st.cache_resource
+def _get_technical_analyzer() -> "IndianMarketAnalyzer":
+    """Return a cached singleton technical analyzer."""
+    return IndianMarketAnalyzer()
+
+
+@st.cache_resource
+def _get_options_engine() -> "IndianOptionsStrategyEngine":
+    """Return a cached singleton options strategy engine."""
+    return IndianOptionsStrategyEngine()
+
+
+@st.cache_resource
+def _get_visualizer() -> "IndianMarketVisualizer":
+    """Return a cached singleton visualizer."""
+    return IndianMarketVisualizer()
+
+
+# ---------------------------------------------------------------------------
+# Cached data-fetch / analysis functions (results cached up to TTL seconds)
+# ---------------------------------------------------------------------------
+
+@st.cache_data(ttl=300)
+def _fetch_index_data(symbol: str, time_period: str) -> pd.DataFrame:
+    """Fetch and cache index OHLCV data for up to 5 minutes."""
+    return _get_data_fetcher().fetch_index_data(symbol, time_period)
+
+
+@st.cache_data(ttl=300)
+def _fetch_market_overview() -> Dict:
+    """Fetch and cache the market overview for up to 5 minutes."""
+    return _get_data_fetcher().fetch_market_overview()
+
+
+@st.cache_data(ttl=300)
+def _fetch_sector_performance() -> Dict:
+    """Fetch and cache sector-performance data for up to 5 minutes."""
+    return _get_data_fetcher().fetch_sector_performance()
+
+
+@st.cache_data(ttl=300)
+def _fetch_options_chain(symbol: str) -> Dict:
+    """Fetch and cache the options chain for up to 5 minutes."""
+    return _get_data_fetcher().fetch_options_chain(symbol)
+
+
+@st.cache_data(ttl=300)
+def _fetch_news(symbol: str) -> List:
+    """Fetch and cache news items for up to 5 minutes."""
+    return _get_data_fetcher().fetch_news(symbol)
+
+
+@st.cache_data(ttl=60)
+def _get_market_status() -> Dict:
+    """Fetch and cache the market open/close status for up to 1 minute."""
+    return _get_data_fetcher().get_market_status()
+
+
+@st.cache_data(ttl=300)
+def _analyze_index(symbol: str, time_period: str) -> Dict:
+    """Run and cache technical analysis for up to 5 minutes.
+
+    Re-uses the already-cached index data so the underlying fetch is not
+    repeated when multiple tabs request analysis for the same symbol.
+    """
+    data = _fetch_index_data(symbol, time_period)
+    if data.empty:
+        return {"error": f"No data available for {symbol}"}
+    return _get_technical_analyzer().analyze_index(data, symbol)
+
+
+@st.cache_data(ttl=300)
+def _analyze_options_chain(symbol: str, time_period: str) -> Dict:
+    """Run and cache options-chain analysis for up to 5 minutes."""
+    options_data = _fetch_options_chain(symbol)
+    data = _fetch_index_data(symbol, time_period)
+    if data.empty:
+        return {}
+    current_price = data["Close"].iloc[-1]
+    return _get_options_engine().analyze_options_chain(options_data, current_price, symbol)
+
+
 class IndianTradingApp:
     """Main Indian Trading Application"""
     
     def __init__(self):
-        self.data_fetcher = IndianMarketDataFetcher()
-        self.technical_analyzer = IndianMarketAnalyzer()
-        self.options_engine = IndianOptionsStrategyEngine()
+        self.data_fetcher = _get_data_fetcher()
+        self.technical_analyzer = _get_technical_analyzer()
+        self.options_engine = _get_options_engine()
         self.portfolio_simulator = IndianPortfolioSimulator(config.DEFAULT_INITIAL_CAPITAL)
-        self.visualizer = IndianMarketVisualizer()
+        self.visualizer = _get_visualizer()
         
         # Initialize session state
         if 'portfolio_simulator' not in st.session_state:
@@ -154,7 +247,7 @@ class IndianTradingApp:
         
         # Market status
         try:
-            market_status = self.data_fetcher.get_market_status()
+            market_status = _get_market_status()
             market_icon = "🟢" if market_status.get('is_market_open', False) else "🔴"
             st.sidebar.markdown(f"**Market:** {market_icon} {'Open' if market_status.get('is_market_open', False) else 'Closed'}")
         except:
@@ -166,11 +259,19 @@ class IndianTradingApp:
         
         # Symbol selection
         symbol_options = {symbol: info.name for symbol, info in INDIAN_MARKET_SYMBOLS.items()}
+        symbol_keys = list(symbol_options.keys())
+        if st.session_state.selected_symbol not in symbol_keys:
+            logger.warning(
+                "selected_symbol '%s' not found in INDIAN_MARKET_SYMBOLS; "
+                "falling back to first available symbol.",
+                st.session_state.selected_symbol,
+            )
+        default_idx = symbol_keys.index(st.session_state.selected_symbol) if st.session_state.selected_symbol in symbol_keys else 0
         selected_symbol = st.sidebar.selectbox(
             "Select Market Index",
-            options=list(symbol_options.keys()),
+            options=symbol_keys,
             format_func=lambda x: symbol_options[x],
-            index=list(symbol_options.keys()).index(st.session_state.selected_symbol)
+            index=default_idx
         )
         st.session_state.selected_symbol = selected_symbol
         
@@ -230,7 +331,7 @@ class IndianTradingApp:
         st.sidebar.subheader("🕐 Market Status")
         
         try:
-            market_status = self.data_fetcher.get_market_status()
+            market_status = _get_market_status()
             
             if market_status.get('is_market_open'):
                 st.sidebar.success("🟢 Market Open")
@@ -260,8 +361,8 @@ class IndianTradingApp:
         try:
             # Fetch market overview data
             with st.spinner("Fetching market data..."):
-                overview_data = self.data_fetcher.fetch_market_overview()
-                sector_data = self.data_fetcher.fetch_sector_performance()
+                overview_data = _fetch_market_overview()
+                sector_data = _fetch_sector_performance()
             
             if not overview_data:
                 st.error("Unable to fetch market data. Please try again later.")
@@ -322,7 +423,7 @@ class IndianTradingApp:
             market_data = {}
             
             for symbol in symbols:
-                data = self.data_fetcher.fetch_index_data(symbol, st.session_state.analysis_params['time_period'])
+                data = _fetch_index_data(symbol, st.session_state.analysis_params['time_period'])
                 if not data.empty:
                     market_data[symbol] = data
             
@@ -356,14 +457,14 @@ class IndianTradingApp:
         try:
             # Fetch data
             with st.spinner(f"Analyzing {INDIAN_MARKET_SYMBOLS[symbol].name}..."):
-                data = self.data_fetcher.fetch_index_data(symbol, time_period)
+                data = _fetch_index_data(symbol, time_period)
                 
                 if data.empty:
                     st.error(f"No data available for {INDIAN_MARKET_SYMBOLS[symbol].name}")
                     return
                 
                 # Perform technical analysis
-                analysis = self.technical_analyzer.analyze_index(data, symbol)
+                analysis = _analyze_index(symbol, time_period)
             
             if 'error' in analysis:
                 st.error(f"Analysis error: {analysis['error']}")
@@ -462,22 +563,22 @@ class IndianTradingApp:
         try:
             # Fetch data
             with st.spinner(f"Analyzing {INDIAN_MARKET_SYMBOLS[symbol].name} options..."):
-                data = self.data_fetcher.fetch_index_data(symbol, time_period)
-                options_data = self.data_fetcher.fetch_options_chain(symbol)
+                data = _fetch_index_data(symbol, time_period)
+                options_data = _fetch_options_chain(symbol)
                 
                 if data.empty:
                     st.error(f"No data available for {INDIAN_MARKET_SYMBOLS[symbol].name}")
                     return
             
             # Perform technical analysis for signal
-            analysis = self.technical_analyzer.analyze_index(data, symbol)
+            analysis = _analyze_index(symbol, time_period)
             if 'error' in analysis:
                 st.error(f"Analysis error: {analysis['error']}")
                 return
             
             # Analyze options chain
             current_price = data['Close'].iloc[-1]
-            options_analysis = self.options_engine.analyze_options_chain(options_data, current_price, symbol)
+            options_analysis = _analyze_options_chain(symbol, time_period)
             
             # Display options metrics
             col1, col2, col3, col4 = st.columns(4)
@@ -724,7 +825,7 @@ class IndianTradingApp:
                 if st.button("📊 Update Prices"):
                     # Update position prices
                     symbol = st.session_state.selected_symbol
-                    data = self.data_fetcher.fetch_index_data(symbol, "1d")
+                    data = _fetch_index_data(symbol, "1d")
                     if not data.empty:
                         current_price = data['Close'].iloc[-1]
                         price_data = {symbol: current_price}
@@ -762,17 +863,17 @@ class IndianTradingApp:
             
             # Fetch all data
             with st.spinner("Generating comprehensive report..."):
-                data = self.data_fetcher.fetch_index_data(symbol, time_period)
-                options_data = self.data_fetcher.fetch_options_chain(symbol)
-                news_data = self.data_fetcher.fetch_news(symbol)
+                data = _fetch_index_data(symbol, time_period)
+                options_data = _fetch_options_chain(symbol)
+                news_data = _fetch_news(symbol)
                 
                 if data.empty:
                     st.error(f"No data available for {INDIAN_MARKET_SYMBOLS[symbol].name}")
                     return
             
             # Perform analysis
-            technical_analysis = self.technical_analyzer.analyze_index(data, symbol)
-            options_analysis = self.options_engine.analyze_options_chain(options_data, data['Close'].iloc[-1], symbol)
+            technical_analysis = _analyze_index(symbol, time_period)
+            options_analysis = _analyze_options_chain(symbol, time_period)
             portfolio_summary = st.session_state.portfolio_simulator.get_portfolio_summary()
             
             # Create report sections
